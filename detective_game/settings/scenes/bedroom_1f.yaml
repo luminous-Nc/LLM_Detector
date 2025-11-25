@@ -1,0 +1,35 @@
+# 场景：一楼卧室
+id: bedroom_1f
+name: 一楼客房
+description: |
+  一楼的客房，有几张单人床。
+  窗户用厚窗帘遮挡，光线昏暗。
+  进藤和�的场川就住在这里。
+
+accessibility:
+  default: true
+  rules: []
+
+connections:
+  - entrance_hall
+
+investigation_points:
+  - id: bed_1
+    name: 进藤的床铺
+    description: 进藤的床，被褥有些凌乱
+    clue_id: debt_notice
+    discovered: false
+    
+  - id: bed_2
+    name: �的场川的床铺
+    description: �的场川的床，整整齐齐
+    clue_id: investigation_notebook
+    discovered: false
+    requires: first_murder_happened
+    
+  - id: bedroom_window
+    name: 窗户
+    description: 被窗帘遮住的窗户
+    clue_id: null
+    discovered: false
+

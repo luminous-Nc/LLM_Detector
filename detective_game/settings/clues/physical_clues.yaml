@@ -1,0 +1,97 @@
+# 物证类线索
+clues:
+  # 第一案相关
+  - id: bloody_pipe
+    name: 沾血的铁管
+    type: physical
+    category: murder_weapon
+    description: |
+      一根生锈的铁管，一端沾满了暗红色的血迹。
+      这似乎是杀害�的场川的凶器。
+    discovery:
+      location: storage_room
+      point: tool_shelf
+      requires_event: first_murder_happened
+    connections:
+      - related_to: first_murder
+      - points_to: [uesugi]
+    is_key_evidence: true
+
+  - id: blood_stain
+    name: 地上的血迹
+    type: physical
+    category: crime_scene
+    description: |
+      储藏室地板上的一大片血迹。
+      血迹的形状表明受害者倒下时头朝门口方向。
+    discovery:
+      location: storage_room
+      point: floor_stain
+      requires_event: first_murder_happened
+    connections:
+      - related_to: first_murder
+    is_key_evidence: false
+
+  # 第二案相关
+  - id: poisoned_cup
+    name: 有毒的杯子
+    type: physical
+    category: murder_weapon
+    description: |
+      一个普通的茶杯，残留着淡淡的苦杏仁味。
+      杯中的饮料被下了毒。
+    discovery:
+      location: music_room
+      point: refreshment_table
+      requires_event: second_murder_happened
+    connections:
+      - related_to: second_murder
+      - points_to: [uesugi]
+    is_key_evidence: true
+
+  - id: suspicious_bottle
+    name: 可疑的瓶子
+    type: physical
+    category: evidence
+    description: |
+      酒柜里一个没有标签的小瓶子。
+      闻起来有刺鼻的气味。
+    discovery:
+      location: dining_room
+      point: wine_cabinet
+      requires_event: second_murder_happened
+    connections:
+      - related_to: second_murder
+      - points_to: [uesugi]
+    is_key_evidence: true
+
+  # 关键证物
+  - id: blood_stained_clothes
+    name: 带血的衣服
+    type: physical
+    category: evidence
+    description: |
+      衣柜深处藏着一件带有血迹的衬衫。
+      这是凶手的铁证。
+    discovery:
+      location: bedroom_master
+      point: master_wardrobe
+    connections:
+      - related_to: first_murder
+      - points_to: [uesugi]
+    is_key_evidence: true
+
+  - id: missing_knife_clue
+    name: 失踪的刀
+    type: physical
+    category: evidence
+    description: |
+      刀架上少了一把菜刀。
+      它去了哪里？
+    discovery:
+      location: kitchen
+      point: knife_rack
+    connections:
+      - related_to: potential_weapon
+    is_key_evidence: false
+

@@ -1,0 +1,36 @@
+# 场景：客厅
+id: living_room
+name: 客厅
+description: |
+  宽敞的客厅，配有舒适的沙发和壁炉。
+  这是大家聚集讨论的主要场所。
+  壁炉上方挂着一个古老的时钟，滴答作响。
+
+accessibility:
+  default: true
+  rules: []
+
+connections:
+  - entrance_hall
+  - kitchen
+  - study
+
+investigation_points:
+  - id: fireplace
+    name: 壁炉
+    description: 装饰华丽的壁炉，似乎很久没有使用了
+    clue_id: burnt_letter_fragment
+    discovered: false
+    
+  - id: bookshelf
+    name: 书架
+    description: 靠墙的书架，摆满了各种书籍
+    clue_id: old_diary
+    discovered: false
+    
+  - id: sofa_cushion
+    name: 沙发垫下
+    description: 柔软的沙发，坐垫下面似乎有什么东西
+    clue_id: torn_photo
+    discovered: false
+

@@ -1,0 +1,62 @@
+# 角色：上杉
+id: uesugi
+name: 上杉武雄
+role: murderer
+
+public:
+  occupation: 大学生，音乐社团社长
+  description: 稳重可靠的社团领袖，组织了这次合宿活动
+
+private:
+  secret: "一年前的失踪案与他有关，他必须让真相永远沉默"
+  guilt: "那个人的死，是意外...但我必须掩盖它"
+  goal: "消灭所有可能知道真相的人"
+
+personality:
+  traits: [表面稳重, 内心阴暗, 城府深, 善于伪装]
+  speaking_style: 说话温和有礼，总是表现出关心他人的样子
+
+backstory: |
+  音乐社团的社长，表面上是个可靠的领袖。
+  但一年前，他在这栋别墅犯下了不可饶恕的罪行。
+  这次组织合宿，是为了利用"意外"消灭知情者。
+
+relationships:
+  shingo:
+    type: subordinate
+    trust: 0.3
+    note: "社团成员，可能知道一些事"
+  victim_1:
+    type: enemy
+    trust: 0.0
+    note: "必须消除的威胁"
+
+schedule:
+  dawn: bedroom_master
+  morning: study
+  noon: dining_room
+  afternoon: living_room
+  evening: study
+  night: bedroom_master
+
+# 凶手的行动计划
+action_plan:
+  - trigger:
+      day: 1
+      time: night
+    action: kill
+    target: victim_1
+    location: storage_room
+    method: "利用混乱时机，用钝器击打后脑"
+    clue_left: bloody_pipe
+    
+  - trigger:
+      day: 2
+      time: night
+    action: kill
+    target: shingo
+    location: music_room
+    method: "在饮料中下毒"
+    condition: "shingo_knows_secret"
+    clue_left: poisoned_cup
+

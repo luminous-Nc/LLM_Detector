@@ -1,0 +1,36 @@
+# 全局游戏配置
+game:
+  title: "尸人庄谜案"
+  description: "一场发生在封闭别墅中的连环谋杀案"
+  max_days: 3
+  starting_location: "entrance_hall"
+  starting_time:
+    day: 1
+    period: "morning"
+
+# 时间段定义
+time_periods:
+  - id: "dawn"
+    name: "黎明"
+    order: 0
+  - id: "morning"
+    name: "早上"
+    order: 1
+  - id: "noon"
+    name: "中午"
+    order: 2
+  - id: "afternoon"
+    name: "下午"
+    order: 3
+  - id: "evening"
+    name: "傍晚"
+    order: 4
+  - id: "night"
+    name: "深夜"
+    order: 5
+
+# 玩家初始状态
+player:
+  name: "叶村让"
+  description: "普通的大学生，被卷入了这场离奇的事件"
+

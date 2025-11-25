@@ -1,0 +1,35 @@
+# 场景：餐厅
+id: dining_room
+name: 餐厅
+description: |
+  可以容纳十余人的大餐厅，长桌上摆放着精致的餐具。
+  窗户紧闭，只能听到外面隐约的骚动声。
+
+accessibility:
+  default: true
+  rules: []
+
+connections:
+  - entrance_hall
+  - kitchen
+
+investigation_points:
+  - id: dining_table
+    name: 餐桌
+    description: 长长的橡木餐桌，可以坐下很多人
+    clue_id: null
+    discovered: false
+    
+  - id: wine_cabinet
+    name: 酒柜
+    description: 靠墙的酒柜，里面有各种酒类
+    clue_id: suspicious_bottle
+    discovered: false
+    requires: second_murder_happened
+    
+  - id: dining_window
+    name: 餐厅窗户
+    description: 可以看到侧院的窗户
+    clue_id: null
+    discovered: false
+

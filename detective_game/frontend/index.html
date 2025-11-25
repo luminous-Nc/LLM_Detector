@@ -1,128 +1,855 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <title>LLM 侦探原型</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 2rem;
-        background: #f7f9fb;
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>尸人庄谜案 - LLM 侦探游戏</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #1a1a2e;
+      --bg-card: #16213e;
+      --bg-card-hover: #1f3460;
+      --accent: #e94560;
+      --accent-light: #ff6b6b;
+      --text-primary: #eaeaea;
+      --text-secondary: #a0a0a0;
+      --text-muted: #6c6c6c;
+      --border: #2a2a4a;
+      --success: #4ecdc4;
+      --warning: #ffd93d;
+      --danger: #ff6b6b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Serif SC', serif;
+      background: linear-gradient(135deg, var(--bg-dark) 0%, #0f0f23 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      grid-template-rows: auto 1fr auto;
+      gap: 1rem;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-family: 'ZCOOL KuaiLe', cursive;
+      font-size: 1.8rem;
+      color: var(--accent);
+      text-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
+    }
+
+    .time-display {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 1.1rem;
+    }
+
+    .time-badge {
+      background: rgba(233, 69, 96, 0.2);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--accent);
+    }
+
+    /* Main content */
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 1rem 1.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-body {
+      padding: 1.5rem;
+    }
+
+    /* Scene panel */
+    .scene-panel {
+      flex: 1;
+    }
+
+    .scene-description {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      font-style: italic;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+    }
+
+    .scene-occupants {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .occupant-badge {
+      background: rgba(78, 205, 196, 0.2);
+      color: var(--success);
+      padding: 0.4rem 0.8rem;
+      border-radius: 15px;
+      font-size: 0.9rem;
+      border: 1px solid rgba(78, 205, 196, 0.3);
+    }
+
+    /* Actions panel */
+    .actions-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.8rem;
+    }
+
+    .action-btn {
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+
+    .action-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .action-btn.move { border-left: 3px solid var(--success); }
+    .action-btn.talk { border-left: 3px solid var(--warning); }
+    .action-btn.investigate { border-left: 3px solid var(--accent); }
+    .action-btn.wait { border-left: 3px solid var(--text-muted); }
+
+    /* Sidebar */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Event log */
+    .event-log {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .event-log::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .event-log::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+
+    .event-log::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 3px;
+    }
+
+    .event-item {
+      padding: 0.8rem;
+      margin-bottom: 0.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      border-left: 3px solid var(--border);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .event-item.critical {
+      border-left-color: var(--danger);
+      background: rgba(233, 69, 96, 0.1);
+    }
+
+    .event-item.narrative {
+      border-left-color: var(--success);
+    }
+
+    .event-item.player_action {
+      border-left-color: var(--warning);
+    }
+
+    .event-item .event-type {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .event-item .event-text {
+      font-size: 0.9rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Clues panel */
+    .clues-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .clue-item {
+      padding: 0.6rem;
+      margin-bottom: 0.4rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .clue-item:hover {
+      background: rgba(233, 69, 96, 0.2);
+    }
+
+    .clue-item.key-evidence {
+      border: 1px solid var(--accent);
+    }
+
+    /* Conversation modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 1rem 1.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .chat-message {
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      max-width: 80%;
+    }
+
+    .chat-message.player {
+      background: var(--accent);
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-message.npc {
+      background: rgba(255, 255, 255, 0.1);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-message .speaker {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .modal-footer {
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .modal-footer input {
+      flex: 1;
+      padding: 0.8rem;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: inherit;
+    }
+
+    .modal-footer button {
+      padding: 0.8rem 1.5rem;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .modal-footer button:hover {
+      background: var(--accent-light);
+    }
+
+    /* Clue selector */
+    .clue-selector {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .clue-chip {
+      padding: 0.3rem 0.8rem;
+      background: rgba(233, 69, 96, 0.2);
+      border: 1px solid var(--accent);
+      border-radius: 15px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .clue-chip:hover, .clue-chip.selected {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+
+    .loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--accent);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
       }
-      header h1 {
-        margin: 0 0 1rem;
+
+      .sidebar {
+        order: 2;
       }
-      section {
-        margin-bottom: 1.5rem;
-        padding: 1rem;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      }
-      #actions button {
-        margin-right: 0.5rem;
-        margin-bottom: 0.5rem;
-        padding: 0.6rem 1rem;
-      }
-      #log {
-        max-height: 260px;
-        overflow-y: auto;
-        border-left: 3px solid #4a90e2;
-        padding-left: 1rem;
-      }
-      .event {
-        margin-bottom: 0.8rem;
-      }
-      .meta {
-        color: #555;
-        font-size: 0.9rem;
-      }
-    </style>
-  </head>
-  <body>
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
     <header>
-      <h1>LLM 侦探原型</h1>
-      <p>每回合选择一个动作，观察 NPC 的回应，逐步揭开真相。</p>
+      <h1>🔍 尸人庄谜案</h1>
+      <div class="time-display">
+        <span class="time-badge" id="time-display">加载中...</span>
+        <button class="action-btn" onclick="resetGame()">重新开始</button>
+      </div>
     </header>
 
-    <section id="state">
-      <h2>当前状态</h2>
-      <p id="turn"></p>
-      <p id="location"></p>
-      <p id="clues"></p>
-    </section>
+    <main>
+      <!-- Scene Card -->
+      <div class="card scene-panel">
+        <div class="card-header">
+          <span id="scene-name">当前位置</span>
+        </div>
+        <div class="card-body">
+          <div class="scene-description" id="scene-description">
+            加载中...
+          </div>
+          <div class="scene-occupants" id="scene-occupants"></div>
+        </div>
+      </div>
 
-    <section id="actions">
-      <h2>可执行动作</h2>
-      <div id="action-buttons"></div>
-    </section>
+      <!-- Actions Card -->
+      <div class="card">
+        <div class="card-header">可执行动作</div>
+        <div class="card-body actions-panel" id="actions-panel">
+          <div class="loading">加载中</div>
+        </div>
+      </div>
+    </main>
 
-    <section id="log">
-      <h2>最近事件</h2>
-      <div id="event-list"></div>
-    </section>
+    <aside class="sidebar">
+      <!-- Event Log -->
+      <div class="card">
+        <div class="card-header">事件日志</div>
+        <div class="card-body event-log" id="event-log">
+          <div class="loading">等待事件</div>
+        </div>
+      </div>
 
-    <script>
-      const API_BASE = "http://127.0.0.1:8000";
+      <!-- Clues -->
+      <div class="card">
+        <div class="card-header">
+          <span>收集的线索</span>
+          <span id="clues-count">0</span>
+        </div>
+        <div class="card-body clues-list" id="clues-list">
+          <div style="color: var(--text-muted);">尚未发现线索</div>
+        </div>
+      </div>
+    </aside>
+  </div>
 
-      async function fetchState() {
+  <!-- Conversation Modal -->
+  <div class="modal-overlay" id="conversation-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <span id="conversation-title">对话</span>
+        <button class="modal-close" onclick="closeConversation()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="chat-messages" id="chat-messages"></div>
+      </div>
+      <div class="clue-selector" id="clue-selector" style="display: none;"></div>
+      <div class="modal-footer">
+        <input type="text" id="message-input" placeholder="输入消息..." onkeypress="handleKeyPress(event)" />
+        <button onclick="sendMessage()">发送</button>
+        <button onclick="closeConversation()">结束对话</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clue Detail Modal -->
+  <div class="modal-overlay" id="clue-modal">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <span id="clue-title">线索详情</span>
+        <button class="modal-close" onclick="closeClueModal()">×</button>
+      </div>
+      <div class="modal-body" id="clue-detail"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+    let currentConversationId = null;
+    let selectedClue = null;
+    let playerClues = [];
+
+    // ============================================================
+    // API 调用
+    // ============================================================
+
+    async function fetchState() {
+      try {
         const res = await fetch(`${API_BASE}/api/state`);
-        if (!res.ok) {
-          console.error("获取状态失败");
-          return;
-        }
+        if (!res.ok) throw new Error("获取状态失败");
         const data = await res.json();
         renderState(data);
+      } catch (err) {
+        console.error(err);
+        document.getElementById("scene-description").textContent = "连接服务器失败，请确保后端已启动。";
       }
+    }
 
-      async function postAction(action) {
+    async function postAction(action) {
+      try {
+        document.getElementById("actions-panel").innerHTML = '<div class="loading">处理中</div>';
+        
         const res = await fetch(`${API_BASE}/api/action`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(action),
         });
-        if (!res.ok) {
-          alert("执行动作失败");
-          return;
-        }
+        if (!res.ok) throw new Error("执行动作失败");
         const data = await res.json();
+        
+        // 检查是否触发对话
+        if (action.type === "talk") {
+          const convEvent = data.recent_events?.find(e => e.metadata?.conversation_id);
+          if (convEvent) {
+            currentConversationId = convEvent.metadata.conversation_id;
+            openConversation(action.target);
+          }
+        }
+        
         renderState(data);
+      } catch (err) {
+        console.error(err);
+        alert("执行动作失败");
+        fetchState();
       }
+    }
 
-      function renderState(state) {
-        document.getElementById("turn").textContent = `回合：${state.turn}，时间：${state.current_time}`;
-        document.getElementById("location").textContent = `当前位置：${state.player_location}`;
-        document.getElementById("clues").textContent = `线索：${
-          state.clues && state.clues.length ? state.clues.join(", ") : "暂无线索"
-        }`;
+    async function fetchClues() {
+      try {
+        const res = await fetch(`${API_BASE}/api/clues`);
+        if (!res.ok) throw new Error("获取线索失败");
+        const data = await res.json();
+        playerClues = data.clues || [];
+        renderClues(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
 
-        const actionBox = document.getElementById("action-buttons");
-        actionBox.textContent = "";
-        (state.available_actions || []).forEach((action) => {
-          const btn = document.createElement("button");
-          btn.textContent = action.label;
-          btn.onclick = () =>
-            postAction({ type: action.type, target: action.target, metadata: action.metadata || {} });
-          actionBox.appendChild(btn);
+    async function sendMessage() {
+      const input = document.getElementById("message-input");
+      const content = input.value.trim();
+      if (!content || !currentConversationId) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/conversation/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversation_id: currentConversationId,
+            content: content,
+            attached_clue: selectedClue,
+          }),
         });
+        if (!res.ok) throw new Error("发送消息失败");
+        const data = await res.json();
+        
+        input.value = "";
+        selectedClue = null;
+        updateClueSelector();
+        
+        if (data.conversation) {
+          renderConversation(data.conversation);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("发送消息失败");
+      }
+    }
 
-        const eventList = document.getElementById("event-list");
-        eventList.textContent = "";
-        (state.events || []).forEach((event) => {
-          const div = document.createElement("div");
-          div.className = "event";
-          const meta = document.createElement("div");
-          meta.className = "meta";
-          meta.textContent = `[${event.event_type}] ${event.actor || "系统"} @ ${event.location || "N/A"}`;
-          const text = document.createElement("div");
-          text.textContent = event.text;
-          div.appendChild(meta);
-          div.appendChild(text);
-          eventList.appendChild(div);
+    async function resetGame() {
+      if (!confirm("确定要重新开始游戏吗？")) return;
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/reset`, { method: "POST" });
+        if (!res.ok) throw new Error("重置失败");
+        const data = await res.json();
+        renderState(data.state);
+        fetchClues();
+      } catch (err) {
+        console.error(err);
+        alert("重置游戏失败");
+      }
+    }
+
+    // ============================================================
+    // 渲染函数
+    // ============================================================
+
+    function renderState(state) {
+      // 时间
+      document.getElementById("time-display").textContent = state.time?.display || "未知时间";
+      
+      // 场景
+      const scene = state.current_scene || {};
+      document.getElementById("scene-name").textContent = `📍 ${scene.name || "未知地点"}`;
+      document.getElementById("scene-description").textContent = scene.description || "...";
+      
+      // 在场人物
+      const occupantsEl = document.getElementById("scene-occupants");
+      occupantsEl.innerHTML = "";
+      if (scene.occupants && scene.occupants.length > 0) {
+        scene.occupants.forEach(actor => {
+          const badge = document.createElement("span");
+          badge.className = "occupant-badge";
+          badge.textContent = `👤 ${actor.name}`;
+          occupantsEl.appendChild(badge);
+        });
+      } else {
+        occupantsEl.innerHTML = '<span style="color: var(--text-muted);">这里没有其他人</span>';
+      }
+      
+      // 动作
+      renderActions(state.available_actions || []);
+      
+      // 事件
+      renderEvents(state.recent_events || []);
+      
+      // 线索数量
+      document.getElementById("clues-count").textContent = state.player?.clues_count || 0;
+      
+      // 刷新线索列表
+      fetchClues();
+    }
+
+    function renderActions(actions) {
+      const panel = document.getElementById("actions-panel");
+      panel.innerHTML = "";
+      
+      if (actions.length === 0) {
+        panel.innerHTML = '<div style="color: var(--text-muted);">没有可用的动作</div>';
+        return;
+      }
+      
+      actions.forEach(action => {
+        const btn = document.createElement("button");
+        btn.className = `action-btn ${action.type}`;
+        btn.textContent = action.label;
+        btn.onclick = () => postAction(action);
+        panel.appendChild(btn);
+      });
+    }
+
+    function renderEvents(events) {
+      const log = document.getElementById("event-log");
+      log.innerHTML = "";
+      
+      if (events.length === 0) {
+        log.innerHTML = '<div style="color: var(--text-muted);">暂无事件</div>';
+        return;
+      }
+      
+      events.forEach(event => {
+        const item = document.createElement("div");
+        item.className = `event-item ${event.event_type}`;
+        
+        const typeLabel = {
+          "player_action": "🎮 玩家",
+          "npc_action": "👤 NPC",
+          "narrative": "📖 叙事",
+          "critical": "⚠️ 重要",
+          "crime": "💀 案件",
+          "system": "⚙️ 系统",
+        }[event.event_type] || event.event_type;
+        
+        item.innerHTML = `
+          <div class="event-type">${typeLabel} · ${event.time || ""}</div>
+          <div class="event-text">${event.text}</div>
+        `;
+        log.appendChild(item);
+      });
+      
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function renderClues(data) {
+      const list = document.getElementById("clues-list");
+      const clues = data.clues || [];
+      const keyEvidence = data.key_evidence || [];
+      const keyIds = new Set(keyEvidence.map(c => c.id));
+      
+      if (clues.length === 0) {
+        list.innerHTML = '<div style="color: var(--text-muted);">尚未发现线索</div>';
+        return;
+      }
+      
+      list.innerHTML = "";
+      clues.forEach(clue => {
+        const item = document.createElement("div");
+        item.className = `clue-item ${keyIds.has(clue.id) ? "key-evidence" : ""}`;
+        item.textContent = `${keyIds.has(clue.id) ? "⭐ " : ""}${clue.name}`;
+        item.onclick = () => showClueDetail(clue);
+        list.appendChild(item);
+      });
+    }
+
+    // ============================================================
+    // 对话功能
+    // ============================================================
+
+    function openConversation(actorId) {
+      document.getElementById("conversation-modal").classList.add("active");
+      document.getElementById("conversation-title").textContent = `与 ${actorId} 对话`;
+      document.getElementById("chat-messages").innerHTML = "";
+      document.getElementById("message-input").focus();
+      updateClueSelector();
+    }
+
+    function closeConversation() {
+      document.getElementById("conversation-modal").classList.remove("active");
+      if (currentConversationId) {
+        fetch(`${API_BASE}/api/conversation/end`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversation_id: currentConversationId }),
         });
       }
+      currentConversationId = null;
+      selectedClue = null;
+    }
 
+    function renderConversation(conv) {
+      const container = document.getElementById("chat-messages");
+      container.innerHTML = "";
+      
+      (conv.messages || []).forEach(msg => {
+        const div = document.createElement("div");
+        div.className = `chat-message ${msg.speaker === "player" ? "player" : "npc"}`;
+        
+        let content = msg.content;
+        if (msg.attached_clue) {
+          content = `[出示证据: ${msg.attached_clue}]\n${content}`;
+        }
+        
+        div.innerHTML = `
+          <div class="speaker">${msg.speaker === "player" ? "你" : msg.speaker}</div>
+          <div>${content}</div>
+        `;
+        container.appendChild(div);
+      });
+      
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function updateClueSelector() {
+      const selector = document.getElementById("clue-selector");
+      if (playerClues.length === 0) {
+        selector.style.display = "none";
+        return;
+      }
+      
+      selector.style.display = "flex";
+      selector.innerHTML = "<span style='color: var(--text-muted); font-size: 0.8rem;'>出示证据：</span>";
+      
+      playerClues.forEach(clue => {
+        const chip = document.createElement("span");
+        chip.className = `clue-chip ${selectedClue === clue.id ? "selected" : ""}`;
+        chip.textContent = clue.name;
+        chip.onclick = () => {
+          selectedClue = selectedClue === clue.id ? null : clue.id;
+          updateClueSelector();
+        };
+        selector.appendChild(chip);
+      });
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === "Enter") {
+        sendMessage();
+      }
+    }
+
+    // ============================================================
+    // 线索详情
+    // ============================================================
+
+    function showClueDetail(clue) {
+      document.getElementById("clue-modal").classList.add("active");
+      document.getElementById("clue-title").textContent = clue.name;
+      document.getElementById("clue-detail").innerHTML = `
+        <p style="margin-bottom: 1rem;"><strong>类型:</strong> ${clue.type}</p>
+        <p style="margin-bottom: 1rem;"><strong>分类:</strong> ${clue.category}</p>
+        <p style="white-space: pre-wrap;">${clue.description}</p>
+        ${clue.is_key_evidence ? '<p style="color: var(--accent); margin-top: 1rem;"><strong>⭐ 关键证据</strong></p>' : ''}
+      `;
+    }
+
+    function closeClueModal() {
+      document.getElementById("clue-modal").classList.remove("active");
+    }
+
+    // ============================================================
+    // 初始化
+    // ============================================================
+
+    document.addEventListener("DOMContentLoaded", () => {
       fetchState();
-    </script>
-  </body>
+    });
+
+    // 点击模态框外部关闭
+    document.querySelectorAll(".modal-overlay").forEach(overlay => {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove("active");
+          if (overlay.id === "conversation-modal") {
+            closeConversation();
+          }
+        }
+      });
+    });
+  </script>
+</body>
 </html>

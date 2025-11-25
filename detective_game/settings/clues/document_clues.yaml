@@ -1,0 +1,153 @@
+# 文档类线索
+clues:
+  - id: old_diary
+    name: 旧日记
+    type: document
+    category: backstory
+    description: |
+      一本泛黄的日记，记载着这栋别墅的过去。
+      提到了一年前这里发生过"意外"。
+    discovery:
+      location: living_room
+      point: bookshelf
+    connections:
+      - related_to: past_incident
+    is_key_evidence: false
+
+  - id: investigation_notebook
+    name: 调查笔记
+    type: document
+    category: evidence
+    description: |
+      这是�的场川一直在做的调查记录。
+      他似乎发现了上杉的秘密...
+      最后一页写着："我知道一年前到底发生了什么"
+    discovery:
+      location: bedroom_1f
+      point: bed_2
+      requires_event: first_murder_happened
+    connections:
+      - related_to: first_murder
+      - related_to: past_incident
+      - points_to: [uesugi]
+    is_key_evidence: true
+
+  - id: debt_notice
+    name: 催债通知
+    type: document
+    category: backstory
+    description: |
+      一封措辞严厉的催债信。
+      进藤欠了一大笔钱...
+    discovery:
+      location: bedroom_1f
+      point: bed_1
+    connections:
+      - related_to: shingo_motive
+    is_key_evidence: false
+
+  - id: secret_documents
+    name: 机密文件
+    type: document
+    category: evidence
+    description: |
+      锁在书桌抽屉里的文件。
+      记载着一年前"失踪者"的真实命运。
+    discovery:
+      location: study
+      point: desk_drawer
+      requires_item: has_study_key
+    connections:
+      - related_to: past_incident
+      - points_to: [uesugi]
+    is_key_evidence: true
+
+  - id: uesugi_plan
+    name: 上杉的计划
+    type: document
+    category: evidence
+    description: |
+      上杉写下的计划书。
+      详细记载了如何利用"丧尸事件"来掩盖谋杀。
+    discovery:
+      location: bedroom_master
+      point: master_desk
+    connections:
+      - related_to: first_murder
+      - related_to: second_murder
+      - points_to: [uesugi]
+    is_key_evidence: true
+
+  - id: yuki_diary
+    name: 雪子的日记
+    type: document
+    category: testimony
+    description: |
+      雪子的私人日记。
+      她目睹了一年前的事件，但一直不敢说出来。
+      "那天晚上，我看到上杉学长..."
+    discovery:
+      location: bedroom_2f
+      point: yuki_room
+    connections:
+      - related_to: past_incident
+      - points_to: [uesugi]
+    is_key_evidence: true
+
+  - id: research_notes
+    name: 研究笔记
+    type: document
+    category: backstory
+    description: |
+      有人留在图书室的笔记。
+      似乎在研究这栋别墅的历史。
+    discovery:
+      location: library
+      point: reading_table
+    connections:
+      - related_to: villa_history
+    is_key_evidence: false
+
+  - id: villa_history
+    name: 别墅历史
+    type: document
+    category: backstory
+    description: |
+      记载别墅历史的古书。
+      这栋建筑有很多隐藏的通道...
+    discovery:
+      location: library
+      point: old_section
+    connections:
+      - related_to: hidden_passages
+    is_key_evidence: false
+
+  - id: old_newspaper
+    name: 旧报纸
+    type: document
+    category: backstory
+    description: |
+      一年前的报纸，报道了一起失踪案。
+      失踪者最后出现的地点就在这附近...
+    discovery:
+      location: storage_room
+      point: storage_boxes
+    connections:
+      - related_to: past_incident
+    is_key_evidence: false
+
+  - id: burnt_letter_fragment
+    name: 烧焦的信件残片
+    type: document
+    category: evidence
+    description: |
+      壁炉里发现的烧焦信纸碎片。
+      只能辨认出几个字："...必须消灭...知道真相的人..."
+    discovery:
+      location: living_room
+      point: fireplace
+    connections:
+      - related_to: uesugi_plan
+      - points_to: [uesugi]
+    is_key_evidence: true
+

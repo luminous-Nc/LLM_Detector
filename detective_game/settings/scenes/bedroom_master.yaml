@@ -1,0 +1,43 @@
+# 场景：主卧室
+id: bedroom_master
+name: 主卧室
+description: |
+  别墅最大的卧室，装饰豪华。
+  上杉作为组织者住在这里。
+  房间里有一个保险箱。
+
+accessibility:
+  default: false
+  rules:
+    - condition:
+        has_item: master_key
+      accessible: true
+      message: "你用钥匙打开了主卧的门"
+    - condition:
+        after_event: uesugi_arrested
+      accessible: true
+      message: "主卧现在可以进入了"
+
+connections:
+  - stairs_to_2f
+
+investigation_points:
+  - id: master_desk
+    name: 主卧书桌
+    description: 精致的书桌，上面有些文件
+    clue_id: uesugi_plan
+    discovered: false
+    
+  - id: safe_box
+    name: 保险箱
+    description: 墙上嵌着一个保险箱
+    clue_id: final_evidence
+    discovered: false
+    requires: has_safe_code
+    
+  - id: master_wardrobe
+    name: 衣柜
+    description: 大衣柜，里面挂着衣服
+    clue_id: blood_stained_clothes
+    discovered: false
+

@@ -1,0 +1,43 @@
+# 角色：进藤
+id: shingo
+name: 进藤真吾
+role: suspect
+
+public:
+  occupation: 大学生，音乐社团成员
+  description: 开朗健谈的青年，社团里的活跃分子
+
+private:
+  secret: "他欠了一笔巨款，正在寻找还债的方法"
+  guilt: "曾经偷看过别人的日记"
+  goal: "度过这次危机，想办法解决债务问题"
+
+personality:
+  traits: [外向, 健谈, 有些浮躁, 内心焦虑]
+  speaking_style: 说话快速热情，喜欢开玩笑缓解气氛，但有时会突然沉默
+
+backstory: |
+  大学音乐社团的活跃成员，擅长吉他演奏。
+  表面上阳光开朗，但背负着沉重的债务压力。
+  这次来别墅，除了社团活动，还有其他目的...
+
+relationships:
+  uesugi:
+    type: friend
+    trust: 0.6
+    note: "社团里的朋友，但最近关系有些紧张"
+  yuki:
+    type: crush
+    trust: 0.8
+    note: "暗恋的对象"
+
+schedule:
+  dawn: bedroom_1f
+  morning: living_room
+  noon: dining_room
+  afternoon: music_room
+  evening: garden
+  night: bedroom_1f
+
+action_plan: null
+

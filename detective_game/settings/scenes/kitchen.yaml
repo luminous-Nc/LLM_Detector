@@ -1,0 +1,35 @@
+# 场景：厨房
+id: kitchen
+name: 厨房
+description: |
+  设备齐全的厨房，灶台上还残留着早餐的痕迹。
+  冰箱里储存着足够几天的食物。
+
+accessibility:
+  default: true
+  rules: []
+
+connections:
+  - dining_room
+  - living_room
+  - storage_room
+
+investigation_points:
+  - id: kitchen_counter
+    name: 料理台
+    description: 干净的料理台，有些厨具
+    clue_id: null
+    discovered: false
+    
+  - id: refrigerator
+    name: 冰箱
+    description: 大型双门冰箱，里面存放着食材
+    clue_id: null
+    discovered: false
+    
+  - id: knife_rack
+    name: 刀架
+    description: 墙上的刀架，少了一把刀
+    clue_id: missing_knife_clue
+    discovered: false
+
