@@ -1,5 +1,6 @@
 """Entry point for running the backend server."""
 
+import sys
 from pathlib import Path
 
 import uvicorn
@@ -24,8 +25,16 @@ else:
         print("[ENV] 警告: 未找到 .env 文件")
 
 if __name__ == "__main__":
+    # 默认启动鹅鸭杀游戏，可以用 --detective 启动侦探游戏
+    if "--detective" in sys.argv:
+        app_module = "detective_game.backend.app:app"
+        print("[APP] 启动侦探游戏")
+    else:
+        app_module = "detective_game.backend.goose_duck_app:app"
+        print("[APP] 启动鹅鸭杀游戏")
+    
     uvicorn.run(
-        "detective_game.backend.app:app",
+        app_module,
         host="0.0.0.0",
         port=8000,
         reload=True,
