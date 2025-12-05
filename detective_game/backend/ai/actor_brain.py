@@ -9,7 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from .llm_client import LLMClient, EchoLLMClient
+from .llm_client import LLMClient
 
 if TYPE_CHECKING:
     from ..models import ActorConfig, ActorState, GameState, GameTime
@@ -52,7 +52,7 @@ class ActorBrain:
     """NPC 的 AI 大脑"""
 
     def __init__(self, llm_client: Optional[LLMClient] = None):
-        self.llm = llm_client or EchoLLMClient()
+        self.llm = llm_client
         self._load_prompts()
 
     def _load_prompts(self) -> None:

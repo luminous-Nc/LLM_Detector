@@ -100,9 +100,9 @@ async def send_message(request: MessageRequest) -> Dict[str, Any]:
 
 @app.post("/api/conversation/end")
 async def end_conversation(request: EndConversationRequest) -> Dict[str, Any]:
-    """结束对话"""
+    """结束对话 - 结束后推进时间"""
     manager = get_game_manager()
-    return manager.end_conversation(request.conversation_id)
+    return await manager.end_conversation(request.conversation_id)
 
 
 @app.get("/api/conversation/{conversation_id}")
@@ -143,6 +143,13 @@ async def get_actors() -> Dict[str, Any]:
     """获取所有 NPC 信息"""
     manager = get_game_manager()
     return {"actors": manager.get_all_actors_info()}
+
+
+@app.get("/api/world")
+async def get_world_status() -> Dict[str, Any]:
+    """获取世界整体状况 - 各房间人物分布"""
+    manager = get_game_manager()
+    return manager.get_world_status()
 
 
 @app.post("/api/reset")

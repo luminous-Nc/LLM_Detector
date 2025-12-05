@@ -212,7 +212,9 @@ class GameManager:
         if action_type == "move":
             await self._player_move(target)
         elif action_type == "talk":
+            # 对话不消耗时间，直接返回
             await self._player_start_talk(target)
+            return self.get_game_state_snapshot()
         elif action_type == "investigate":
             await self._player_investigate(target)
         elif action_type == "wait":
@@ -220,7 +222,7 @@ class GameManager:
         elif action_type == "view_clues":
             return self._get_player_clues()
         
-        # 推进时间
+        # 推进时间（对话除外）
         self._advance_time()
         
         # 触发世界事件
@@ -389,16 +391,23 @@ class GameManager:
                         quoted = quoted_msg.content
                 
                 # 生成回复
-                history = conv.format_history(10)
-                response = await self.actor_brain.generate_dialogue_response(
-                    actor_config,
-                    actor_state,
-                    history,
-                    content,
-                    "player",
-                    clue_info,
-                    quoted,
-                )
+                try:
+                    history = conv.format_history(10)
+                    response = await self.actor_brain.generate_dialogue_response(
+                        actor_config,
+                        actor_state,
+                        history,
+                        content,
+                        "player",
+                        clue_info,
+                        quoted,
+                    )
+                except Exception as e:
+                    print(f"[ERROR] 生成对话回复失败: {e}")
+                    return {
+                        "error": f"LLM 调用失败: {str(e)}",
+                        "conversation": conv.to_dict(),
+                    }
                 
                 # 添加 NPC 回复
                 self.conversation_system.add_message(
@@ -421,10 +430,37 @@ class GameManager:
             "conversation": conv.to_dict(),
         }
 
-    def end_conversation(self, conversation_id: str) -> Dict[str, Any]:
-        """结束对话"""
+    async def end_conversation(self, conversation_id: str) -> Dict[str, Any]:
+        """结束对话 - 对话结束后推进时间"""
         success = self.conversation_system.end_conversation(conversation_id)
-        return {"success": success}
+        
+        if success:
+            # 对话结束后推进时间
+            self.current_turn_events = []
+            
+            self.current_turn_events.append(GameEvent(
+                event_type=EventType.SYSTEM,
+                text="对话结束，时间推进...",
+                day=self.game_state.time.day,
+                time=self.game_state.time.period.value,
+            ))
+            
+            # 推进时间
+            self._advance_time()
+            
+            # 触发世界事件
+            triggered_events = self.event_system.check_and_trigger_events(
+                self.game_state, self.actor_states
+            )
+            self.current_turn_events.extend(triggered_events)
+            
+            # NPC 行动
+            await self._execute_npc_turns()
+        
+        return {
+            "success": success,
+            "state": self.get_game_state_snapshot(),
+        }
 
     def get_conversation(self, conversation_id: str) -> Dict[str, Any]:
         """获取对话详情"""
@@ -455,6 +491,20 @@ class GameManager:
 
     async def _execute_npc_turns(self) -> None:
         """执行所有 NPC 的回合"""
+        # 先添加一个系统事件，说明 NPC 正在行动
+        alive_npcs = [
+            self.actor_configs[aid].name 
+            for aid, state in self.actor_states.items() 
+            if state.is_alive and aid in self.actor_configs
+        ]
+        if alive_npcs:
+            self.current_turn_events.append(GameEvent(
+                event_type=EventType.SYSTEM,
+                text=f"其他人正在行动中...",
+                day=self.game_state.time.day,
+                time=self.game_state.time.period.value,
+            ))
+        
         for actor_id, actor_state in self.actor_states.items():
             if not actor_state.is_alive:
                 continue
@@ -598,6 +648,57 @@ class GameManager:
                 "is_alive": state.is_alive if state else False,
             })
         return result
+
+    def get_world_status(self) -> Dict[str, Any]:
+        """获取世界整体状况 - 各房间人物分布"""
+        # 按场景分组
+        scenes_status = {}
+        
+        # 获取所有场景
+        all_scenes = self.scene_system.get_all_scenes_info(self.game_state)
+        for scene in all_scenes:
+            scene_id = scene["id"]
+            scene_name = scene["name"]
+            
+            # 获取该场景的人物
+            occupants = []
+            for actor_id, state in self.actor_states.items():
+                if state.location == scene_id:
+                    config = self.actor_configs.get(actor_id)
+                    if config:
+                        status = "存活" if state.is_alive else "死亡"
+                        # 获取最近的记忆作为当前状态
+                        recent_mem = state.get_recent_memory(1)
+                        activity = recent_mem[0].content if recent_mem else "无"
+                        occupants.append({
+                            "id": actor_id,
+                            "name": config.name,
+                            "status": status,
+                            "activity": activity,
+                        })
+            
+            # 检查玩家是否在此场景
+            player_here = self.game_state.player.location == scene_id
+            
+            scenes_status[scene_id] = {
+                "name": scene_name,
+                "description": scene.get("description", ""),
+                "occupants": occupants,
+                "player_here": player_here,
+                "accessible": scene.get("accessible", True),
+            }
+        
+        return {
+            "time": self.game_state.time.to_dict(),
+            "player": {
+                "name": self.game_state.player.name,
+                "location": self.game_state.player.location,
+                "location_name": self._get_scene_name(self.game_state.player.location),
+            },
+            "scenes": scenes_status,
+            "alive_count": sum(1 for s in self.actor_states.values() if s.is_alive),
+            "dead_count": sum(1 for s in self.actor_states.values() if not s.is_alive),
+        }
 
     def is_game_over(self) -> bool:
         """检查游戏是否结束"""

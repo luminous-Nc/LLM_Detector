@@ -419,6 +419,107 @@
       to { transform: rotate(360deg); }
     }
 
+    /* 思考动画 */
+    .thinking-dots .dots {
+      display: inline-block;
+      animation: thinking 1.4s infinite;
+    }
+
+    @keyframes thinking {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+
+    .thinking-dots {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* World Status */
+    .world-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .room-card {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      border: 1px solid var(--border);
+    }
+
+    .room-card.player-here {
+      border-color: var(--accent);
+      background: rgba(233, 69, 96, 0.1);
+    }
+
+    .room-card h4 {
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .room-card .room-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.8rem;
+    }
+
+    .room-occupant {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.9rem;
+    }
+
+    .room-occupant:last-child {
+      border-bottom: none;
+    }
+
+    .room-occupant .status-alive {
+      color: var(--success);
+    }
+
+    .room-occupant .status-dead {
+      color: var(--danger);
+    }
+
+    .room-occupant .activity {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .world-summary {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+
+    .world-summary .stat {
+      text-align: center;
+    }
+
+    .world-summary .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--accent);
+    }
+
+    .world-summary .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
     /* Responsive */
     @media (max-width: 900px) {
       .container {
@@ -437,6 +538,7 @@
       <h1>🔍 尸人庄谜案</h1>
       <div class="time-display">
         <span class="time-badge" id="time-display">加载中...</span>
+        <button class="action-btn" onclick="showWorldStatus()">🗺️ 世界状况</button>
         <button class="action-btn" onclick="resetGame()">重新开始</button>
       </div>
     </header>
@@ -501,6 +603,19 @@
         <input type="text" id="message-input" placeholder="输入消息..." onkeypress="handleKeyPress(event)" />
         <button onclick="sendMessage()">发送</button>
         <button onclick="closeConversation()">结束对话</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- World Status Modal -->
+  <div class="modal-overlay" id="world-modal">
+    <div class="modal" style="max-width: 700px;">
+      <div class="modal-header">
+        <span>🗺️ 世界状况</span>
+        <button class="modal-close" onclick="closeWorldModal()">×</button>
+      </div>
+      <div class="modal-body" id="world-status-content">
+        <div class="loading">加载中</div>
       </div>
     </div>
   </div>
@@ -584,30 +699,107 @@
       const content = input.value.trim();
       if (!content || !currentConversationId) return;
 
+      // 立即显示玩家消息
+      const playerMsgTemp = {
+        speaker: "player",
+        content: content,
+        attached_clue: selectedClue,
+      };
+      appendMessage(playerMsgTemp);
+      
+      // 清空输入
+      const msgContent = content;
+      const msgClue = selectedClue;
+      input.value = "";
+      selectedClue = null;
+      updateClueSelector();
+      
+      // 显示 NPC 思考中状态
+      showThinkingIndicator();
+
       try {
         const res = await fetch(`${API_BASE}/api/conversation/message`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             conversation_id: currentConversationId,
-            content: content,
-            attached_clue: selectedClue,
+            content: msgContent,
+            attached_clue: msgClue,
           }),
         });
+        
+        // 移除思考指示器
+        hideThinkingIndicator();
+        
         if (!res.ok) throw new Error("发送消息失败");
         const data = await res.json();
         
-        input.value = "";
-        selectedClue = null;
-        updateClueSelector();
+        if (data.error) {
+          // 显示错误消息
+          appendErrorMessage(data.error);
+          console.error("API 错误:", data.error);
+        }
         
         if (data.conversation) {
           renderConversation(data.conversation);
         }
       } catch (err) {
+        hideThinkingIndicator();
         console.error(err);
-        alert("发送消息失败");
+        alert("发送消息失败，请检查后端是否正常运行");
       }
+    }
+    
+    function appendMessage(msg) {
+      const container = document.getElementById("chat-messages");
+      const div = document.createElement("div");
+      div.className = `chat-message ${msg.speaker === "player" ? "player" : "npc"}`;
+      
+      let content = msg.content;
+      if (msg.attached_clue) {
+        content = `[出示证据: ${msg.attached_clue}]\n${content}`;
+      }
+      
+      div.innerHTML = `
+        <div class="speaker">${msg.speaker === "player" ? "你" : msg.speaker}</div>
+        <div>${content}</div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    function showThinkingIndicator() {
+      const container = document.getElementById("chat-messages");
+      const indicator = document.createElement("div");
+      indicator.id = "thinking-indicator";
+      indicator.className = "chat-message npc";
+      indicator.innerHTML = `
+        <div class="speaker">NPC</div>
+        <div class="thinking-dots">正在思考<span class="dots">...</span></div>
+      `;
+      container.appendChild(indicator);
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    function hideThinkingIndicator() {
+      const indicator = document.getElementById("thinking-indicator");
+      if (indicator) {
+        indicator.remove();
+      }
+    }
+    
+    function appendErrorMessage(error) {
+      const container = document.getElementById("chat-messages");
+      const div = document.createElement("div");
+      div.className = "chat-message npc";
+      div.style.background = "rgba(233, 69, 96, 0.2)";
+      div.style.border = "1px solid var(--danger)";
+      div.innerHTML = `
+        <div class="speaker" style="color: var(--danger);">⚠️ 系统错误</div>
+        <div style="color: var(--danger)">${error}</div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
     }
 
     async function resetGame() {
@@ -748,14 +940,23 @@
       updateClueSelector();
     }
 
-    function closeConversation() {
+    async function closeConversation() {
       document.getElementById("conversation-modal").classList.remove("active");
       if (currentConversationId) {
-        fetch(`${API_BASE}/api/conversation/end`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversation_id: currentConversationId }),
-        });
+        try {
+          const res = await fetch(`${API_BASE}/api/conversation/end`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ conversation_id: currentConversationId }),
+          });
+          const data = await res.json();
+          // 对话结束后更新游戏状态（时间推进、NPC行动）
+          if (data.state) {
+            renderState(data.state);
+          }
+        } catch (err) {
+          console.error("结束对话失败:", err);
+        }
       }
       currentConversationId = null;
       selectedClue = null;
@@ -829,6 +1030,96 @@
 
     function closeClueModal() {
       document.getElementById("clue-modal").classList.remove("active");
+    }
+
+    // ============================================================
+    // 世界状况
+    // ============================================================
+
+    async function showWorldStatus() {
+      document.getElementById("world-modal").classList.add("active");
+      document.getElementById("world-status-content").innerHTML = '<div class="loading">加载中</div>';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/world`);
+        if (!res.ok) throw new Error("获取世界状况失败");
+        const data = await res.json();
+        renderWorldStatus(data);
+      } catch (err) {
+        console.error(err);
+        document.getElementById("world-status-content").innerHTML = 
+          '<div style="color: var(--danger);">加载失败</div>';
+      }
+    }
+
+    function closeWorldModal() {
+      document.getElementById("world-modal").classList.remove("active");
+    }
+
+    function renderWorldStatus(data) {
+      const container = document.getElementById("world-status-content");
+      
+      // 概况统计
+      let html = `
+        <div class="world-summary">
+          <div class="stat">
+            <div class="stat-value">${data.time?.display || "未知"}</div>
+            <div class="stat-label">当前时间</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">${data.alive_count || 0}</div>
+            <div class="stat-label">存活人数</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" style="color: var(--danger)">${data.dead_count || 0}</div>
+            <div class="stat-label">死亡人数</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">📍 ${data.player?.location_name || "未知"}</div>
+            <div class="stat-label">你的位置</div>
+          </div>
+        </div>
+        <div class="world-status-grid">
+      `;
+      
+      // 各房间状况
+      const scenes = data.scenes || {};
+      for (const [sceneId, scene] of Object.entries(scenes)) {
+        const isPlayerHere = scene.player_here;
+        const occupantCount = scene.occupants?.length || 0;
+        
+        html += `
+          <div class="room-card ${isPlayerHere ? 'player-here' : ''}">
+            <h4>
+              ${isPlayerHere ? '📍' : '🏠'} ${scene.name}
+              ${!scene.accessible ? '🔒' : ''}
+            </h4>
+        `;
+        
+        if (scene.occupants && scene.occupants.length > 0) {
+          scene.occupants.forEach(occ => {
+            const statusClass = occ.status === "存活" ? "status-alive" : "status-dead";
+            const statusIcon = occ.status === "存活" ? "💚" : "💀";
+            html += `
+              <div class="room-occupant">
+                <span class="${statusClass}">${statusIcon} ${occ.name}</span>
+                <span class="activity">- ${occ.activity}</span>
+              </div>
+            `;
+          });
+        } else if (!isPlayerHere) {
+          html += '<div style="color: var(--text-muted); font-size: 0.85rem;">空无一人</div>';
+        }
+        
+        if (isPlayerHere) {
+          html += '<div class="room-occupant"><span style="color: var(--accent);">👤 你在这里</span></div>';
+        }
+        
+        html += '</div>';
+      }
+      
+      html += '</div>';
+      container.innerHTML = html;
     }
 
     // ============================================================
