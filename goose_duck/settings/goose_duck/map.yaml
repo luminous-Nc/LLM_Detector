@@ -1,0 +1,83 @@
+# 鹅鸭杀地图配置（新布局）
+# 自上而下：
+# 淋浴间 → 船员宿舍 → 北部走廊 → 大厅 → 南部走廊
+# 左右连接：
+# 船员宿舍 ↔ 电机室 ↔ 医疗室 ↔ 南部走廊 ↔ 储物间
+# 北部走廊 ↔ 武器室
+
+rooms:
+
+  shower:
+    name: "淋浴间"
+    description: "洗漱区域，蒸汽模糊了视线。"
+    connections: ["quarters"]
+    tasks: ["clean_showers"]
+    position: [1, 3]
+
+  quarters:
+    name: "船员宿舍"
+    description: "整齐的床铺和储物柜，船员休息的地方。"
+    connections: ["shower", "engine_room", "north_corridor"]
+    tasks: []
+    position: [1, 2]
+
+  engine_room:
+    name: "电机室"
+    description: "核心机组房，嗡嗡运转的引擎与仪表。"
+    connections: ["quarters"]
+    tasks: ["tune_engine"]
+    position: [1, 1]
+
+  north_corridor:
+    name: "北部走廊"
+    description: "通往武器室和大厅的主要通道。"
+    connections: ["quarters", "weapons", "hall"]
+    tasks: []
+    position: [2, 2]
+
+  weapons:
+    name: "武器室"
+    description: "武器架林立，存放防御装备的房间。"
+    connections: ["north_corridor"]
+    tasks: ["calibrate_weapons"]
+    position: [2, 3]
+
+  hall:
+    name: "大厅"
+    description: "开局集合与讨论的中心区域。"
+    connections: ["north_corridor", "south_corridor"]
+    tasks: []
+    is_meeting_room: true
+    position: [3, 2]
+
+  south_corridor:
+    name: "南部走廊"
+    description: "连接医疗室与储物间的通道。"
+    connections: ["hall", "storage", "medbay"]
+    tasks: []
+    position: [4, 2]
+
+  storage:
+    name: "储物间"
+    description: "杂物堆放区，箱子堆得满满当当。"
+    connections: ["south_corridor", "cargo"]
+    tasks: ["organize_storage"]
+    position: [4, 3]
+  
+  cargo:
+    name: "货舱"
+    description: "堆放货物的地方"
+    connections: ["storage"]
+    tasks: ["count_box"]
+    position: [4, 4]
+
+  medbay:
+    name: "医疗室"
+    description: "医疗设施完备，可进行紧急救治。"
+    connections: ["south_corridor"]
+    tasks: ["treat_patient"]
+    position: [4, 1]
+
+spawn_room: "hall"
+
+emergency_button_room: "hall"

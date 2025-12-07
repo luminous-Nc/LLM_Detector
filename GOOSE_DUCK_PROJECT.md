@@ -134,7 +134,7 @@
 ## 📁 项目结构
 
 ```
-detective_game/
+goose_duck/
 ├── backend/
 │   ├── models/
 │   │   ├── identity.py          # ✨ 身份系统（新增）
@@ -165,7 +165,7 @@ detective_game/
 ### 1. 安装依赖
 
 ```bash
-cd detective_game
+cd goose_duck
 pip install -r requirements.txt
 ```
 
@@ -181,7 +181,7 @@ MODEL=x-ai/grok-3-mini-beta  # 或其他模型
 ### 3. 启动后端
 
 ```bash
-python -m detective_game.backend
+python -m goose_duck.backend
 ```
 
 后端将在 `http://127.0.0.1:8000` 启动。
@@ -189,7 +189,7 @@ python -m detective_game.backend
 ### 4. 启动前端
 
 ```bash
-python -m http.server 5173 --directory detective_game/frontend
+python -m http.server 5173 --directory goose_duck/frontend
 ```
 
 然后访问：`http://127.0.0.1:5173/goose_duck.html`

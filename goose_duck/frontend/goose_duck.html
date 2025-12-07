@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM 鹅鸭杀</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-space: #0a0a1a;
+      --bg-card: #1a1a2e;
+      --bg-card-hover: #252545;
+      --accent-goose: #4ecdc4;
+      --accent-duck: #e74c3c;
+      --accent-neutral: #9b59b6;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0c0;
+      --text-muted: #606080;
+      --border: #303050;
+      --success: #2ecc71;
+      --warning: #f1c40f;
+      --danger: #e74c3c;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg-space);
+      background-image: 
+        radial-gradient(white 1px, transparent 1px),
+        radial-gradient(white 1px, transparent 1px);
+      background-size: 100px 100px, 50px 50px;
+      background-position: 0 0, 25px 25px;
+      background-attachment: fixed;
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      grid-template-rows: auto 1fr;
+      gap: 1rem;
+      min-height: 100vh;
+      align-items: start;
+    }
+
+    /* Header */
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: rgba(26, 26, 46, 0.95);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header h1 .goose { color: var(--accent-goose); }
+    header h1 .duck { color: var(--accent-duck); }
+
+    .header-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .phase-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .phase-badge.free_roam { background: var(--accent-goose); color: #000; }
+    .phase-badge.discussion { background: var(--warning); color: #000; }
+    .phase-badge.voting { background: var(--accent-duck); color: #fff; }
+    .phase-badge.game_over { background: var(--text-muted); }
+    .phase-badge.lobby { background: var(--border); }
+
+    /* Cards */
+    .card {
+      background: rgba(26, 26, 46, 0.95);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 0.8rem 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid var(--border);
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-body {
+      padding: 1rem;
+    }
+
+    /* Left Panel - Player Info */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .role-display {
+      text-align: center;
+      padding: 1.5rem;
+    }
+
+    .role-icon {
+      font-size: 4rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .role-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.3rem;
+    }
+
+    .role-team {
+      font-size: 0.85rem;
+      padding: 0.2rem 0.8rem;
+      border-radius: 10px;
+      display: inline-block;
+    }
+
+    .role-team.good { background: var(--accent-goose); color: #000; }
+    .role-team.evil { background: var(--accent-duck); color: #fff; }
+    .role-team.neutral { background: var(--accent-neutral); color: #fff; }
+
+    .role-desc {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Player list */
+    .player-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.6rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .player-item.dead {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    .player-avatar {
+      font-size: 1.5rem;
+    }
+
+    .player-info {
+      flex: 1;
+    }
+
+    .player-name {
+      font-weight: 500;
+    }
+
+    .player-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Center - Map/Room */
+    .center-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .room-display {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .room-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .room-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .room-desc {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      border-left: 3px solid var(--accent-goose);
+      margin-bottom: 1rem;
+    }
+
+    .players-here {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .player-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.8rem;
+      background: rgba(78, 205, 196, 0.2);
+      border: 1px solid var(--accent-goose);
+      border-radius: 20px;
+      font-size: 0.9rem;
+    }
+
+    .player-badge.dead {
+      background: rgba(231, 76, 60, 0.2);
+      border-color: var(--danger);
+      opacity: 0.7;
+    }
+
+    /* Actions */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.6rem;
+    }
+
+    .action-btn {
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--text-primary);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .action-btn.move { border-left: 3px solid var(--accent-goose); }
+    .action-btn.talk { border-left: 3px solid var(--warning); }
+    .action-btn.kill { 
+      border-left: 3px solid var(--danger);
+      background: rgba(231, 76, 60, 0.1);
+    }
+    .action-btn.kill:hover { background: rgba(231, 76, 60, 0.3); }
+    .action-btn.report { border-left: 3px solid var(--danger); }
+    .action-btn.emergency { border-left: 3px solid var(--warning); }
+    .action-btn.vote { border-left: 3px solid var(--accent-neutral); }
+
+    /* Right Panel - Events & Map */
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      height: calc(100vh - 120px);
+    }
+
+    .event-log {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .event-item {
+      padding: 0.6rem;
+      margin-bottom: 0.4rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      border-left: 3px solid var(--border);
+    }
+
+    .event-item.critical { border-left-color: var(--danger); background: rgba(231, 76, 60, 0.1); }
+    .event-item.player_action { border-left-color: var(--accent-goose); }
+    .event-item.system { border-left-color: var(--text-muted); }
+    .event-item.crime { border-left-color: var(--danger); }
+
+    /* Grid Map */
+    .grid-map {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 6px;
+      flex: 1;
+      min-height: 500px;
+    }
+
+    .map-cell {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .map-cell.empty {
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .cell-players {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .player-chip {
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .player-chip.dead {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    /* Start Screen */
+    .start-screen {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+    }
+
+    .start-screen h2 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .start-screen p {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      max-width: 500px;
+    }
+
+    .start-btn {
+      padding: 1rem 3rem;
+      font-size: 1.2rem;
+      background: var(--accent-goose);
+      color: #000;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 700;
+      transition: all 0.3s;
+    }
+
+    .start-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(78, 205, 196, 0.5);
+    }
+
+    /* Game Over */
+    .game-over-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .game-over-overlay.active {
+      display: flex;
+    }
+
+    .game-over-content {
+      text-align: center;
+      padding: 3rem;
+    }
+
+    .game-over-content h2 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .game-over-content.good h2 { color: var(--accent-goose); }
+    .game-over-content.evil h2 { color: var(--accent-duck); }
+    .game-over-content.neutral h2 { color: var(--accent-neutral); }
+
+    /* Discussion Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      width: 90%;
+      max-width: 700px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 1rem 1.5rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .modal-footer {
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .modal-footer input {
+      flex: 1;
+      padding: 0.8rem;
+      background: var(--bg-space);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: inherit;
+    }
+
+    .modal-footer button {
+      padding: 0.8rem 1.5rem;
+      background: var(--accent-goose);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+    }
+
+    .discussion-message {
+      padding: 0.8rem;
+      margin-bottom: 0.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+
+    .discussion-message .speaker {
+      font-weight: 500;
+      color: var(--accent-goose);
+      margin-bottom: 0.3rem;
+    }
+
+    /* Utility */
+    .hidden { display: none !important; }
+
+    /* Responsive */
+    @media (max-width: 1000px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .left-panel, .right-panel {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><span class="goose">🦢</span> LLM 鹅鸭杀 <span class="duck">🦆</span></h1>
+      <div class="header-info">
+        <div class="role-button">
+          <button class="action-btn" id="role-btn">我的身份</button>
+          <div class="role-dropdown" id="role-dropdown">
+            <div id="role-content">
+              <div style="color: var(--text-muted);">身份未知</div>
+            </div>
+          </div>
+        </div>
+        <button class="action-btn" onclick="resetGame()">重新开始</button>
+      </div>
+    </header>
+
+    <!-- Start Screen -->
+    <div class="start-screen" id="start-screen">
+      <h2>🦢 vs 🦆</h2>
+      <p>在这艘太空飞船上，有人并不是他们看起来的那样...<br>找出隐藏在船员中的鸭子，或者作为鸭子消灭所有人！</p>
+      <button class="start-btn" onclick="startGame()">开始游戏</button>
+    </div>
+
+    <!-- Game UI (hidden until game starts) -->
+    <div class="left-panel hidden" id="left-panel">
+      <div class="card" style="height: calc(100vh - 120px); display:flex; flex-direction:column;">
+        <div class="card-header">
+          <div>
+            <div class="room-name" id="room-name">📍 未知位置</div>
+            <div class="room-desc" id="room-desc" style="color: var(--text-secondary); font-size:0.9rem;">...</div>
+          </div>
+          <div style="text-align:right;">
+            <div id="round-display">回合 0</div>
+            <div class="phase-badge" id="phase-badge">等待开始</div>
+          </div>
+        </div>
+        <div style="padding:1rem;">
+          <div style="margin-bottom: 0.5rem;"><strong>在场人员:</strong></div>
+          <div class="players-here" id="players-here" style="margin-bottom:1rem;"></div>
+          <div class="grid-map" id="grid-map"></div>
+          <div style="margin-top:1rem;">
+            <div style="margin-bottom:0.5rem; font-weight:600;">可执行动作</div>
+            <div class="actions-grid" id="actions-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel hidden" id="right-panel">
+      <div class="card" style="flex:1;">
+        <div class="card-header">玩家信息</div>
+        <div class="card-body" id="player-detail" style="height:100%; overflow-y:auto;">
+          <div style="color: var(--text-muted);">点击左侧地图中的玩家查看详情</div>
+        </div>
+      </div>
+      <div class="card" style="flex:1;">
+        <div class="card-header">事件日志</div>
+        <div class="card-body event-log" id="event-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Discussion Modal -->
+  <div class="modal-overlay" id="discussion-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <span>🗣️ 紧急会议</span>
+      </div>
+      <div class="modal-body" id="discussion-messages"></div>
+      <div class="modal-footer">
+        <input type="text" id="discussion-input" placeholder="发言..." />
+        <button onclick="sendDiscussionMessage()">发言</button>
+        <button onclick="startVoting()" style="background: var(--warning);">开始投票</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over -->
+  <div class="game-over-overlay" id="game-over-overlay">
+    <div class="game-over-content" id="game-over-content">
+      <h2>游戏结束</h2>
+      <p id="game-over-reason"></p>
+      <button class="start-btn" onclick="resetGame()">再来一局</button>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+    let gameState = null;
+    let mapInfo = null;
+    let selectedPlayerId = null;
+    let roleDropdownAutoShow = false;
+
+    // ============================================================
+    // API
+    // ============================================================
+
+    async function fetchState() {
+      try {
+        const res = await fetch(`${API_BASE}/api/state`);
+        const data = await res.json();
+        if (data.error) {
+          showStartScreen();
+          return;
+        }
+        gameState = data;
+        showMainUI();
+        await fetchMap();
+        renderGame();
+      } catch (err) {
+        console.error("获取状态失败:", err);
+      }
+    }
+
+    async function fetchMap() {
+      try {
+        const res = await fetch(`${API_BASE}/api/map`);
+        mapInfo = await res.json();
+        renderGridMap();
+      } catch (err) {
+        console.error("获取地图失败:", err);
+      }
+    }
+
+    async function startGame() {
+      try {
+        const res = await fetch(`${API_BASE}/api/start`, { method: "POST" });
+        gameState = await res.json();
+        roleDropdownAutoShow = true;
+        showMainUI();
+        await fetchMap();
+        renderGame();
+      } catch (err) {
+        console.error("开始游戏失败:", err);
+        alert("开始游戏失败，请确保后端已启动");
+      }
+    }
+
+    async function doAction(action) {
+      try {
+        document.getElementById("actions-grid").innerHTML = '<div style="color: var(--text-muted);">处理中...</div>';
+        
+        const res = await fetch(`${API_BASE}/api/action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(action),
+        });
+        gameState = await res.json();
+        
+        await fetchMap();
+        renderGame();
+        
+        // 检查是否进入讨论
+        if (gameState.phase === "discussion") {
+          document.getElementById("discussion-modal").classList.add("active");
+        }
+      } catch (err) {
+        console.error("执行动作失败:", err);
+        fetchState();
+      }
+    }
+
+    async function resetGame() {
+      try {
+        await fetch(`${API_BASE}/api/reset`, { method: "POST" });
+        document.getElementById("game-over-overlay").classList.remove("active");
+        showStartScreen();
+        gameState = null;
+        mapInfo = null;
+        selectedPlayerId = null;
+      } catch (err) {
+        console.error("重置失败:", err);
+      }
+    }
+
+    async function sendDiscussionMessage() {
+      const input = document.getElementById("discussion-input");
+      const content = input.value.trim();
+      if (!content) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/discussion/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+        const data = await res.json();
+        input.value = "";
+        renderDiscussion(data.messages || []);
+      } catch (err) {
+        console.error("发言失败:", err);
+      }
+    }
+
+    async function startVoting() {
+      try {
+        const res = await fetch(`${API_BASE}/api/discussion/end`, { method: "POST" });
+        gameState = await res.json();
+        document.getElementById("discussion-modal").classList.remove("active");
+        renderGame();
+      } catch (err) {
+        console.error("开始投票失败:", err);
+      }
+    }
+
+    function showMainUI() {
+      document.getElementById("start-screen").classList.add("hidden");
+      document.getElementById("left-panel").classList.remove("hidden");
+      document.getElementById("right-panel").classList.remove("hidden");
+    }
+
+    function showStartScreen() {
+      document.getElementById("start-screen").classList.remove("hidden");
+      document.getElementById("left-panel").classList.add("hidden");
+      document.getElementById("right-panel").classList.add("hidden");
+    }
+
+    function renderRoleDropdown(role, canKill) {
+      const dropdown = document.getElementById("role-dropdown");
+      const content = document.getElementById("role-content");
+      const teamLabels = { good: "好人阵营", evil: "坏人阵营", neutral: "中立阵营" };
+      const roleEmoji = { goose: "🦢", sheriff: "🔍", vigilante: "🗡️", canadian: "🍁", dodo: "🦤", assassin: "🎯" };
+      content.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <div style="font-size:1.4rem;">${roleEmoji[role.role_type] || "❓"}</div>
+          <div>
+            <div style="font-weight:600;">${role.name}</div>
+            <div style="color:var(--text-muted); font-size:0.9rem;">${teamLabels[role.team] || role.team}</div>
+          </div>
+        </div>
+        <div style="color:var(--text-secondary); font-size:0.9rem;">${role.description}</div>
+        ${canKill ? '<div style="color: var(--danger); margin-top: 0.5rem;">🔪 可以击杀</div>' : ''}
+      `;
+      if (roleDropdownAutoShow) {
+        dropdown.classList.add("active");
+        roleDropdownAutoShow = false;
+      }
+    }
+
+    function renderPlayerDetail(st) {
+      const detail = document.getElementById("player-detail");
+      if (!st) {
+        detail.innerHTML = `<div style="color: var(--text-muted);">点击左侧地图中的玩家查看详情</div>`;
+        return;
+      }
+      const roleName = st.role?.name || (st.id === "player" ? gameState?.player?.role?.name || "未知" : "未知");
+      detail.innerHTML = `
+        <div class="player-name" style="font-size:1.1rem; margin-bottom:6px;">${st.name}</div>
+        <div class="player-status">状态：${st.is_alive ? "存活" : "死亡"}</div>
+        <div class="player-status">位置：${st.location || "-"}</div>
+        <div class="player-status">身份：${roleName}</div>
+        <div class="player-status">最近动作：${st.last_action || "idle"}</div>
+      `;
+    }
+
+    function renderGridMap() {
+      if (!mapInfo) return;
+      const grid = document.getElementById("grid-map");
+      if (!grid) return;
+      grid.innerHTML = "";
+
+      // Build location -> players map from mapInfo
+      const roomPlayers = {};
+      Object.values(mapInfo.rooms || {}).forEach(room => {
+        roomPlayers[room.id] = room.players || [];
+      });
+
+      // Use positions from mapInfo (row, col 1-based)
+      for (let row = 1; row <= 5; row++) {
+        for (let col = 1; col <= 4; col++) {
+          const cell = document.createElement("div");
+          cell.className = "map-cell";
+          const room = Object.values(mapInfo.rooms || {}).find(r => {
+            const pos = r.position || [];
+            return pos[0] === row && pos[1] === col;
+          });
+          if (room) {
+            cell.innerHTML = `<div style="font-weight:600;">${room.name}</div><div style="color:var(--text-secondary); font-size:0.85rem;">${room.description || ""}</div>`;
+            const wrap = document.createElement("div");
+            wrap.className = "cell-players";
+            (roomPlayers[room.id] || []).forEach(p => {
+              const chip = document.createElement("div");
+              chip.className = "player-chip" + (p.is_alive ? "" : " dead");
+              chip.textContent = `${p.name}`;
+              chip.onclick = () => {
+                selectedPlayerId = p.id;
+                const full = (gameState.all_players || []).find(ap => ap.id === p.id) || p;
+                renderPlayerDetail(full);
+              };
+              wrap.appendChild(chip);
+            });
+            cell.appendChild(wrap);
+          } else {
+            cell.classList.add("empty");
+          }
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    // ============================================================
+    // Render
+    // ============================================================
+
+  function renderGame() {
+      if (!gameState) return;
+
+      const phaseBadge = document.getElementById("phase-badge");
+      const phaseLabels = {
+        "lobby": "等待开始",
+        "free_roam": "🚀 自由活动",
+        "discussion": "🗣️ 讨论中",
+        "voting": "🗳️ 投票中",
+        "game_over": "游戏结束",
+      };
+      phaseBadge.textContent = phaseLabels[gameState.phase] || gameState.phase;
+      phaseBadge.className = `phase-badge ${gameState.phase}`;
+      
+      document.getElementById("round-display").textContent = `回合 ${gameState.round}`;
+
+      if (gameState.player?.role) {
+        renderRoleDropdown(gameState.player.role, gameState.player.can_kill);
+      }
+
+      // Current room
+      if (gameState.current_room) {
+        document.getElementById("room-name").textContent = `📍 ${gameState.current_room.name}`;
+        document.getElementById("room-desc").textContent = gameState.current_room.description;
+      }
+
+      // Players here
+      const playersHere = document.getElementById("players-here");
+      playersHere.innerHTML = "";
+      (gameState.players_here || []).forEach(p => {
+        const badge = document.createElement("span");
+        badge.className = `player-badge ${p.is_alive ? "" : "dead"}`;
+        badge.innerHTML = `${p.avatar || "👤"} ${p.name}`;
+        playersHere.appendChild(badge);
+      });
+      if ((gameState.players_here || []).length === 0) {
+        playersHere.innerHTML = '<span style="color: var(--text-muted);">这里只有你一个人</span>';
+      }
+
+      // Actions
+      const actionsGrid = document.getElementById("actions-grid");
+      actionsGrid.innerHTML = "";
+      if ((gameState.available_actions || []).length === 0) {
+        actionsGrid.innerHTML = '<div style="color: var(--text-muted);">暂无可用动作</div>';
+      } else {
+        (gameState.available_actions || []).forEach(action => {
+          const btn = document.createElement("button");
+          btn.className = `action-btn ${action.type}`;
+          btn.textContent = action.label;
+          btn.onclick = () => doAction(action);
+          actionsGrid.appendChild(btn);
+        });
+      }
+
+      // Grid map & events
+      renderGridMap();
+      renderEvents(gameState.events || []);
+
+      if (gameState.phase === "game_over") {
+        document.getElementById("game-over-overlay").classList.add("active");
+        document.getElementById("game-over-reason").textContent = gameState.winner_reason || "";
+      }
+    }
+
+    function renderEvents(events) {
+      const eventLog = document.getElementById("event-log");
+      eventLog.innerHTML = "";
+      (events || []).forEach(event => {
+        const div = document.createElement("div");
+        div.className = `event-item ${event.event_type}`;
+        div.textContent = event.text;
+        eventLog.appendChild(div);
+      });
+      eventLog.scrollTop = eventLog.scrollHeight;
+    }
+
+    function renderDiscussion(messages) {
+      const container = document.getElementById("discussion-messages");
+      container.innerHTML = "";
+      messages.forEach(msg => {
+        const div = document.createElement("div");
+        div.className = "discussion-message";
+        div.innerHTML = `
+          <div class="speaker">${msg.speaker_name}</div>
+          <div>${msg.content}</div>
+        `;
+        container.appendChild(div);
+      });
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ============================================================
+    // Init
+    // ============================================================
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchState();
+      // 身份按钮
+      const roleBtn = document.getElementById("role-btn");
+      const dropdown = document.getElementById("role-dropdown");
+      roleBtn.addEventListener("click", () => dropdown.classList.toggle("active"));
+      document.addEventListener("click", (e) => {
+        if (!roleBtn.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.remove("active");
+        }
+      });
+    });
+
+    // 按 Enter 发送讨论消息
+    document.getElementById("discussion-input").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendDiscussionMessage();
+    });
+  </script>
+</body>
+</html>

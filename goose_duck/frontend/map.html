@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM 鹅鸭杀 - 地图</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #1f2b45, #0b1220);
+      color: #e8ecf5;
+      min-height: 100vh;
+    }
+    .card {
+      background: rgba(20, 28, 47, 0.9);
+      border-color: #1f2a44;
+    }
+    .grid-map {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 8px;
+      min-height: 500px;
+    }
+    .map-cell {
+      background: #1c2740;
+      border: 1px solid #2c3b5b;
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .map-cell.empty {
+      background: transparent;
+      border-color: transparent;
+    }
+    .cell-players {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .player-chip {
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid #4ecdc4;
+      background: rgba(78, 205, 196, 0.15);
+      font-size: 0.9rem;
+    }
+    .player-chip.dead {
+      border-color: #e74c3c;
+      background: rgba(231, 76, 60, 0.15);
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid py-3">
+    <header class="d-flex justify-content-between align-items-center mb-3">
+      <div class="fs-4 fw-bold">🗺️ LLM 鹅鸭杀 - 地图</div>
+      <div class="d-flex align-items-center gap-2">
+        <a class="btn btn-outline-light btn-sm" href="game.html">返回游戏</a>
+        <button class="btn btn-outline-warning btn-sm" onclick="resetGame()">重新开始</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>当前位置地图</span>
+        <div class="small" id="phase-badge">Phase: -</div>
+      </div>
+      <div class="card-body">
+        <div class="grid-map" id="grid-map"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+    let gameState = null;
+    let mapInfo = null;
+
+    async function fetchState() {
+      try {
+        const res = await fetch(`${API_BASE}/api/state`);
+        const data = await res.json();
+        if (data.error) return;
+        gameState = data;
+        document.getElementById("phase-badge").textContent = `Phase: ${data.phase || "-"}`;
+      } catch (err) {
+        console.error("获取状态失败:", err);
+      }
+    }
+
+    async function fetchMap() {
+      try {
+        const res = await fetch(`${API_BASE}/api/map`);
+        mapInfo = await res.json();
+        renderMap();
+      } catch (err) {
+        console.error("获取地图失败:", err);
+      }
+    }
+
+    async function resetGame() {
+      try {
+        await fetch(`${API_BASE}/api/reset`, { method: "POST" });
+        gameState = null;
+        mapInfo = null;
+        document.getElementById("grid-map").innerHTML = "";
+      } catch (err) {
+        console.error("重置失败:", err);
+      }
+    }
+
+    function renderMap() {
+      if (!mapInfo || !gameState) return;
+      const grid = document.getElementById("grid-map");
+      grid.innerHTML = "";
+      const currentRoom = gameState.current_room?.id || gameState.current_room?.name || gameState.player?.location;
+
+      // 只显示与玩家同房的玩家
+      const visiblePlayers = {};
+      Object.values(mapInfo.rooms || {}).forEach(r => {
+        visiblePlayers[r.id] = [];
+      });
+      (gameState.all_players || []).forEach(p => {
+        if (p.location === currentRoom) {
+          visiblePlayers[p.location]?.push(p);
+        }
+      });
+
+      for (let row = 1; row <= 5; row++) {
+        for (let col = 1; col <= 4; col++) {
+          const cell = document.createElement("div");
+          cell.className = "map-cell";
+          const room = Object.values(mapInfo.rooms || {}).find(r => {
+            const pos = r.position || [];
+            return pos[0] === row && pos[1] === col;
+          });
+          if (room) {
+            cell.innerHTML = `<div class="fw-semibold">${room.name}</div><div class="text-secondary small">${room.description || ""}</div>`;
+            const wrap = document.createElement("div");
+            wrap.className = "cell-players";
+            (visiblePlayers[room.id] || []).forEach(p => {
+              const chip = document.createElement("div");
+              chip.className = "player-chip" + (p.is_alive ? "" : " dead");
+              chip.textContent = `${p.avatar || "👤"} ${p.name}`;
+              wrap.appendChild(chip);
+            });
+            cell.appendChild(wrap);
+          } else {
+            cell.classList.add("empty");
+          }
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      await fetchState();
+      await fetchMap();
+    });
+  </script>
+</body>
+</html>

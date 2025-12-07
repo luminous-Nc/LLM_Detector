@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>鹅鸭杀 - ADMIN</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #141c2f;
+      --border: #1f2a44;
+      --text: #e8ecf5;
+      --muted: #8da0c2;
+      --accent: #4ecdc4;
+      --danger: #e74c3c;
+      --warning: #f1c40f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 1.3rem; }
+    .pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #10192c;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 12px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      overflow: hidden;
+    }
+    .card h3 { margin-bottom: 8px; font-size: 1rem; display:flex; justify-content: space-between; align-items:center; }
+    .muted { color: var(--muted); }
+    .left-card {
+      height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+    }
+    .grid-map {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(5, 120px);
+      gap: 6px;
+      flex: 1;
+    }
+    .room-cell {
+      background: #1c2740;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .room-cell.empty {
+      background: transparent;
+      border: 1px solid transparent;
+    }
+    .room-cell h4 { font-size: 0.95rem; }
+    .players {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .player-chip {
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .player-chip.dead { opacity: 0.5; text-decoration: line-through; }
+    .right-col {
+      display: grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 12px;
+      height: calc(100vh - 48px);
+    }
+    .info-line { font-size: 0.9rem; margin-bottom: 4px; color: var(--muted); }
+    .list { max-height: 100%; overflow-y: auto; }
+    .list-item { padding: 8px; border-bottom: 1px solid var(--border); }
+    .list-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div class="card left-card">
+      <h3><span>地图</span><span class="pill" id="status-pill">Phase: -</span></h3>
+      <div id="map-grid" class="grid-map"></div>
+    </div>
+
+    <div class="right-col">
+      <div class="card">
+        <h3>玩家信息</h3>
+        <div id="player-detail" style="height:100%; overflow-y:auto;">
+          <div class="muted">点击左侧地图中的玩家查看详情</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>事件日志</h3>
+        <div class="list" id="events"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+    let latestData = { rooms: {}, statuses: [], events: [] };
+    let selectedPlayer = null;
+
+    async function fetchOverview() {
+      try {
+        const res = await fetch(`${API}/api/admin/overview`);
+        if (!res.ok) throw new Error("请求失败");
+        const data = await res.json();
+        latestData = data;
+        render(data);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function render(data) {
+      document.getElementById("status-pill").textContent = `Phase: ${data.phase || "-"} · Round ${data.round || "-"}`;
+      renderMapGrid(data.rooms || {}, data.statuses || []);
+      renderEvents(data.events || []);
+      if (selectedPlayer) {
+        const st = (data.statuses || []).find(p => p.id === selectedPlayer);
+        renderPlayerDetail(st);
+      } else {
+        renderPlayerDetail(null);
+      }
+    }
+
+    function renderMapGrid(rooms, statuses) {
+      const grid = document.getElementById("map-grid");
+      grid.innerHTML = "";
+      const occupied = {};
+      (statuses || []).forEach(st => {
+        if (!occupied[st.location]) occupied[st.location] = [];
+        occupied[st.location].push(st);
+      });
+
+      // Build 5 rows x 4 cols, positions are 1-based from YAML.
+      for (let y = 1; y <= 4; y++) {
+        for (let x = 1; x <= 4; x++) {
+          const cell = document.createElement("div");
+          cell.className = "room-cell";
+          const room = Object.values(rooms).find(r => {
+            const pos = r.position || [];
+            return pos[0] === y && pos[1] === x;
+          });
+          if (room) {
+            cell.innerHTML = `<h4>${room.name}</h4>`;
+            const pWrap = document.createElement("div");
+            pWrap.className = "players";
+            (occupied[room.id] || []).forEach(st => {
+              const chip = document.createElement("div");
+              chip.className = "player-chip" + (st.is_alive ? "" : " dead");
+              chip.textContent = `${st.label} ${st.name}`;
+              chip.onclick = () => { selectedPlayer = st.id; renderPlayerDetail(st); };
+              pWrap.appendChild(chip);
+            });
+            cell.appendChild(pWrap);
+          } else {
+            cell.classList.add("empty");
+          }
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    function renderPlayerDetail(st) {
+      const detail = document.getElementById("player-detail");
+      if (!st) {
+        detail.innerHTML = `<div class="muted">点击左侧玩家查看详情</div>`;
+        return;
+      }
+      const roleName = st.role?.name || "-";
+      detail.innerHTML = `
+        <div class="info-line"><strong>${st.label}</strong> ${st.name}</div>
+        <div class="info-line">身份：${roleName}</div>
+        <div class="info-line">状态：${st.is_alive ? "存活" : "死亡"}</div>
+        <div class="info-line">位置：${st.location || "-"}</div>
+        <div class="info-line">最近动作：${st.last_action || "idle"}</div>
+      `;
+    }
+
+    function renderEvents(events) {
+      const list = document.getElementById("events");
+      list.innerHTML = "";
+      if (!events.length) {
+        list.innerHTML = `<div class="muted">暂无事件</div>`;
+        return;
+      }
+      events.slice(-50).reverse().forEach(ev => {
+        const div = document.createElement("div");
+        div.className = "list-item";
+        div.innerHTML = `
+          <div>${ev.text}</div>
+          <div class="info-line">${ev.time || ""}</div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    fetchOverview();
+    setInterval(fetchOverview, 2000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM 鹅鸭杀 - 游戏</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #1f2b45, #0b1220);
+      color: #e8ecf5;
+      min-height: 100vh;
+    }
+    .card {
+      background: rgba(20, 28, 47, 0.9);
+      border-color: #1f2a44;
+    }
+    .phase-badge {
+      border-radius: 999px;
+      padding: 0.35rem 0.75rem;
+      font-weight: 600;
+    }
+    .card,
+    .card-body,
+    .card-header {
+      color: #f5f7ff;
+    }
+    .text-secondary,
+    .text-muted,
+    .small {
+      color: #d5ddf0 !important;
+    }
+    .action-btn {
+      width: 100%;
+      text-align: left;
+    }
+    .action-move { border-left: 4px solid #4ecdc4; }
+    .action-kill { border-left: 4px solid #e74c3c; }
+    .action-report { border-left: 4px solid #e67e22; }
+    .action-emergency { border-left: 4px solid #f1c40f; }
+    .action-vote { border-left: 4px solid #9b59b6; }
+    .action-talk { border-left: 4px solid #f39c12; }
+    .player-dead { opacity: 0.6; text-decoration: line-through; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid py-3">
+    <header class="d-flex justify-content-between align-items-center mb-3">
+      <div class="fs-4 fw-bold">🦢 LLM 鹅鸭杀</div>
+      <div class="d-flex align-items-center gap-2">
+        <div class="dropdown">
+          <button class="btn btn-outline-light btn-sm dropdown-toggle" id="role-btn" data-bs-toggle="dropdown">我的身份</button>
+          <div class="dropdown-menu dropdown-menu-end p-3 text-dark" id="role-dropdown" style="min-width:240px;">
+            <div id="role-content" class="small text-muted">身份未知</div>
+          </div>
+        </div>
+        <a class="btn btn-outline-info btn-sm" href="map.html">查看地图</a>
+        <button class="btn btn-outline-warning btn-sm" onclick="resetGame()">重新开始</button>
+      </div>
+    </header>
+
+    <div id="start-screen" class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh;">
+      <h2 class="mb-3">🦢 vs 🦆</h2>
+      <p class="text-secondary text-center mb-4">在飞船上推理、欺骗并生存下来。点击开始游戏。</p>
+      <button class="btn btn-success btn-lg" onclick="startGame()">开始游戏</button>
+    </div>
+
+    <div id="game-layout" class="row g-3 d-none">
+      <div class="col-lg-3">
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>玩家状态</span>
+          <span class="badge bg-secondary" id="alive-count">0/0</span>
+        </div>
+          <div class="card-body" id="players-list" style="max-height:65vh; overflow-y:auto;"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">我的信息</div>
+          <div class="card-body" id="my-info">
+            <div class="text-muted small">等待开始...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-bold" id="room-name">📍 未知房间</div>
+              <div class="text-secondary small" id="room-desc">...</div>
+            </div>
+            <div class="text-end">
+              <div class="phase-badge bg-dark text-light" id="phase-badge">等待开始</div>
+              <div class="small" id="round-display">回合 0</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <div class="fw-semibold mb-2">在场人员</div>
+              <div class="d-flex flex-wrap gap-2" id="players-here"></div>
+            </div>
+            <div>
+              <div class="fw-semibold mb-2">可执行动作</div>
+              <div class="d-grid gap-2" id="actions-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-3">
+        <div class="card h-100">
+          <div class="card-header">事件日志</div>
+          <div class="card-body" id="event-log" style="overflow-y:auto; max-height:75vh;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+    let gameState = null;
+    let autoShowRole = false;
+
+    async function fetchState() {
+      try {
+        const res = await fetch(`${API_BASE}/api/state`);
+        const data = await res.json();
+        if (data.error) {
+          showStart();
+          return;
+        }
+        gameState = data;
+        showGame();
+        renderGame();
+      } catch (err) {
+        console.error("获取状态失败:", err);
+        showStart();
+      }
+    }
+
+    async function startGame() {
+      try {
+        const res = await fetch(`${API_BASE}/api/start`, { method: "POST" });
+        gameState = await res.json();
+        autoShowRole = true;
+        showGame();
+        renderGame();
+      } catch (err) {
+        alert("开始游戏失败，请检查后端");
+        console.error(err);
+      }
+    }
+
+    async function doAction(action) {
+      try {
+        const res = await fetch(`${API_BASE}/api/action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(action),
+        });
+        gameState = await res.json();
+        renderGame();
+      } catch (err) {
+        console.error("执行动作失败:", err);
+      }
+    }
+
+    async function resetGame() {
+      try {
+        await fetch(`${API_BASE}/api/reset`, { method: "POST" });
+        gameState = null;
+        autoShowRole = false;
+        showStart();
+      } catch (err) {
+        console.error("重置失败:", err);
+      }
+    }
+
+    function showStart() {
+      document.getElementById("start-screen").classList.remove("d-none");
+      document.getElementById("game-layout").classList.add("d-none");
+    }
+
+    function showGame() {
+      document.getElementById("start-screen").classList.add("d-none");
+      document.getElementById("game-layout").classList.remove("d-none");
+    }
+
+    function renderGame() {
+      if (!gameState) return;
+
+      // Phase
+      const phaseBadge = document.getElementById("phase-badge");
+      const phaseLabels = {
+        "lobby": "等待开始",
+        "free_roam": "🚀 自由活动",
+        "discussion": "🗣️ 讨论中",
+        "voting": "🗳️ 投票中",
+        "game_over": "游戏结束",
+      };
+      phaseBadge.textContent = phaseLabels[gameState.phase] || gameState.phase;
+      phaseBadge.className = "phase-badge bg-dark text-light";
+      if (gameState.phase === "free_roam") phaseBadge.classList.add("bg-success", "text-dark");
+      if (gameState.phase === "discussion") phaseBadge.classList.add("bg-warning", "text-dark");
+      if (gameState.phase === "voting") phaseBadge.classList.add("bg-danger");
+      if (gameState.phase === "game_over") phaseBadge.classList.add("bg-secondary");
+      document.getElementById("round-display").textContent = `回合 ${gameState.round}`;
+
+      // My role dropdown
+      if (gameState.player?.role) renderRole(gameState.player.role, gameState.player.can_kill);
+
+      // Players list
+      const playersList = document.getElementById("players-list");
+      playersList.innerHTML = "";
+      (gameState.all_players || []).forEach(p => {
+        const item = document.createElement("div");
+        item.className = "d-flex align-items-center mb-2 p-2 rounded " + (p.is_alive ? "bg-dark-subtle" : "bg-dark-subtle player-dead");
+        item.innerHTML = `
+          <div class="me-2 fs-5">${p.avatar || "👤"}</div>
+          <div>
+            <div class="fw-semibold">${p.name} ${p.id === "player" ? "(你)" : ""}</div>
+            <div class="text-secondary small">${p.is_alive ? "存活" : "死亡"} · ${p.location || "-"}</div>
+          </div>
+        `;
+        item.onclick = () => renderPlayerDetail(p);
+        playersList.appendChild(item);
+      });
+      const alive = (gameState.all_players || []).filter(p => p.is_alive).length;
+      document.getElementById("alive-count").textContent = `${alive}/${gameState.all_players?.length || 0}`;
+
+      // Room info
+      if (gameState.current_room) {
+        document.getElementById("room-name").textContent = "📍 " + gameState.current_room.name;
+        document.getElementById("room-desc").textContent = gameState.current_room.description || "";
+      }
+      const playersHere = document.getElementById("players-here");
+      playersHere.innerHTML = "";
+      (gameState.players_here || []).forEach(p => {
+        const badge = document.createElement("span");
+        badge.className = "badge bg-secondary-subtle text-black";
+        badge.textContent = `${p.avatar || "👤"} ${p.name}`;
+        badge.onclick = () => renderPlayerDetail(p);
+        playersHere.appendChild(badge);
+      });
+      if ((gameState.players_here || []).length === 0) {
+        playersHere.innerHTML = '<span class="text-secondary">这里只有你一个人</span>';
+      }
+
+      // Actions
+      const actionsGrid = document.getElementById("actions-grid");
+      actionsGrid.innerHTML = "";
+      if ((gameState.available_actions || []).length === 0) {
+        actionsGrid.innerHTML = '<div class="text-secondary">暂无可用动作</div>';
+      } else {
+        (gameState.available_actions || []).forEach(action => {
+          const btn = document.createElement("button");
+          btn.className = "btn btn-outline-light action-btn action-" + action.type;
+          btn.textContent = action.label;
+          btn.onclick = () => doAction(action);
+          actionsGrid.appendChild(btn);
+        });
+      }
+
+      // Events
+      renderEvents(gameState.events || []);
+
+      if (gameState.phase === "game_over") {
+        alert(gameState.winner_reason || "游戏结束");
+      }
+    }
+
+    function renderRole(role, canKill) {
+      const dropdown = document.getElementById("role-dropdown");
+      const content = document.getElementById("role-content");
+      const teamLabels = { good: "好人阵营", evil: "坏人阵营", neutral: "中立阵营" };
+      const roleEmoji = { goose: "🦢", sheriff: "🔍", vigilante: "🗡️", canadian: "🍁", dodo: "🦤", assassin: "🎯" };
+      content.innerHTML = `
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="fs-4">${roleEmoji[role.role_type] || "❓"}</div>
+          <div>
+            <div class="fw-semibold">${role.name}</div>
+            <div class="text-secondary small">${teamLabels[role.team] || role.team}</div>
+          </div>
+        </div>
+        <div class="text-secondary small mb-2">${role.description}</div>
+        ${canKill ? '<div class="text-danger small">🔪 可以击杀</div>' : ''}
+      `;
+      if (autoShowRole) {
+        dropdown.classList.add("show");
+        autoShowRole = false;
+        setTimeout(() => dropdown.classList.remove("show"), 2000);
+      }
+    }
+
+    function renderPlayerDetail(p) {
+      const myInfo = document.getElementById("my-info");
+      myInfo.innerHTML = `
+        <div class="fw-bold mb-1">${p.name}</div>
+        <div class="text-secondary small mb-1">状态：${p.is_alive ? "存活" : "死亡"}</div>
+        <div class="text-secondary small mb-1">位置：${p.location || "-"}</div>
+        <div class="text-secondary small mb-1">最近动作：${p.last_action || "未知"}</div>
+      `;
+    }
+
+    function renderEvents(events) {
+      const eventLog = document.getElementById("event-log");
+      eventLog.innerHTML = "";
+      (events || []).forEach(ev => {
+        const div = document.createElement("div");
+        div.className = "mb-2 p-2 rounded border border-secondary-subtle";
+        div.textContent = ev.text;
+        eventLog.appendChild(div);
+      });
+      eventLog.scrollTop = eventLog.scrollHeight;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchState();
+    });
+  </script>
+</body>
+</html>

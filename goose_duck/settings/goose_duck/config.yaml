@@ -1,0 +1,51 @@
+# 鹅鸭杀游戏配置
+
+game:
+  name: "LLM 鹅鸭杀"
+  description: "一个由 LLM 驱动的社交推理游戏"
+  version: "1.0.0"
+
+# 玩家配置
+player:
+  name: "Player"
+  is_human: true
+
+# NPC 配置（由 LLM 驱动）
+npcs:
+  - id: "npc_red"
+    name: "Alice"
+
+  - id: "npc_blue"
+    name: "Bob"
+
+  - id: "npc_green"
+    name: "Clearlove"
+
+  - id: "npc_yellow"
+    name: "Donk"
+
+  - id: "npc_purple"
+    name: "Ethon"
+
+# 游戏流程
+phases:
+  free_roam:
+    name: "自由活动"
+    description: "玩家可以移动、做任务、与他人互动"
+    
+  discussion:
+    name: "讨论阶段"
+    description: "所有人集合讨论，轮流发言"
+    speaking_order: "round_robin"  # 轮流发言
+    
+  voting:
+    name: "投票阶段"
+    description: "投票决定放逐谁"
+    skip_allowed: true  # 允许弃票
+
+# LLM 设置
+llm:
+  decision_making: true  # NPC 使用 LLM 决策
+  dialogue: true         # NPC 使用 LLM 对话
+  max_tokens: 25600       # 最大回复长度
+

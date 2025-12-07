@@ -1,0 +1,132 @@
+# 鹅鸭杀角色配置
+
+# 默认角色分配（6人局）
+default_setup:
+  total_players: 6
+  roles:
+    # 好人阵营 - 4人
+    - role: goose
+      count: 1
+    - role: sheriff
+      count: 1
+    - role: vigilante
+      count: 1
+    - role: canadian
+      count: 1
+    # 中立阵营 - 1人
+    - role: dodo
+      count: 1
+    # 坏人阵营 - 1人
+    - role: assassin
+      count: 1
+
+# 角色详细信息
+roles:
+  goose:
+    name: "鹅"
+    team: good
+    color: "#4ecdc4"
+    emoji: "🦢"
+    description: "普通船员，通过完成任务或找出坏人获胜。"
+    abilities: []
+    prompt_hint: |
+      你是一只善良的鹅。你的目标是：
+      1. 完成分配给你的任务
+      2. 找出隐藏在船员中的鸭子
+      3. 在讨论时分享你看到的可疑行为，保护同阵营
+      你没有特殊能力，保持低调并完成任务。
+
+  sheriff:
+    name: "警长"
+    team: good
+    color: "#ffd93d"
+    emoji: "🔍"
+    description: "可以击杀任意玩家，但如果击杀鹅会导致双方同归于尽。"
+    abilities:
+      - sheriff_kill
+    prompt_hint: |
+      你是警长，可以亲自执法。你的目标是：
+      1. 用击杀能力清除可疑的鸭子
+      2. 确保你击杀的不是鹅，否则会与其同归于尽
+      3. 在讨论时谨慎曝光自己，避免被恶意引导
+      只有在足够确认目标阵营时再下手。
+
+  vigilante:
+    name: "正义使者"
+    team: good
+    color: "#ff8c42"
+    emoji: "🗡️"
+    description: "只有一次击杀机会，可以猎杀任意玩家。"
+    abilities:
+      - single_kill
+    ability_uses: 1
+    prompt_hint: |
+      你是正义使者，手里只有一颗子弹。你的目标是：
+      1. 找到最可疑的目标并果断击杀
+      2. 只有一次机会，务必在合适的时机使用
+      3. 击杀失败将暴露你的位置和意图
+      谨慎收集情报，关键时刻果断出手。
+
+  canadian:
+    name: "加拿大鹅"
+    team: good
+    color: "#4fa3ff"
+    emoji: "🍁"
+    description: "被杀后会让凶手自动报警进入会议。"
+    abilities: []
+    death_trigger: "auto_report_by_killer"
+    prompt_hint: |
+      你是加拿大鹅，你的死亡会强制让凶手报警。你的目标是：
+      1. 正常完成任务并观察可疑行为
+      2. 如果被盯上，你的特殊能力会帮助阵营获得线索
+      3. 在讨论中提醒大家注意潜在的凶手
+      你没有主动技能，但死亡会暴露凶手行踪。
+
+  dodo:
+    name: "呆呆鸟"
+    team: neutral
+    color: "#9b59b6"
+    emoji: "🦤"
+    description: "在投票阶段被放逐即可立即获胜。"
+    abilities: []
+    special_win_condition: "voted_out"
+    prompt_hint: |
+      你是呆呆鸟，目标独特：
+      1. 让其他人认为你有嫌疑，从而在投票中被放逐
+      2. 不要被鸭子杀死，否则直接失败
+      3. 说话和行动要可疑但不要过于明显
+      你的胜利条件是被投出去，行动要足够诱导但要保护自己。
+
+  assassin:
+    name: "刺客"
+    team: evil
+    color: "#e74c3c"
+    emoji: "🎯"
+    description: "伪装成鹅，暗中杀人；会议期间可狙击两次，每次会议最多一次。"
+    abilities:
+      - kill
+      - snipe
+    snipe_uses: 2
+    snipe_per_meeting: 1
+    prompt_hint: |
+      你是刺客，危险的伪装者。你的目标是：
+      1. 杀死所有好人或让鸭子数量 ≥ 好人数量
+      2. 在会议期间可以使用“狙击”猜测身份，猜中则处决对方，猜错会自尽
+      3. 一局有两次狙击机会，每次会议最多一次，平时也能击杀
+      记住：要表现得像一只无辜的鹅，在适当时机下手。
+
+# 游戏设置
+game_settings:
+  emergency_meetings: 1  # 每人可以召开的紧急会议次数
+  confirm_ejects: true   # 是否显示被放逐者的身份
+  anonymous_votes: false # 是否匿名投票
+
+# 胜利条件
+win_conditions:
+  good:
+    - "所有刺客（鸭阵营）被放逐或死亡"
+    - "所有任务完成"
+  evil:
+    - "鸭阵营数量 ≥ 好人数量"
+  neutral:
+    dodo: "投票阶段被放逐出局"
