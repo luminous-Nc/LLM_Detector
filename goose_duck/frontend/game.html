@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LLM 鹅鸭杀 - 游戏</title>
+  <title>LLM Goose Duck Game - Play</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -41,43 +41,48 @@
     .action-vote { border-left: 4px solid #9b59b6; }
     .action-talk { border-left: 4px solid #f39c12; }
     .player-dead { opacity: 0.6; text-decoration: line-through; }
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      color: #e8ecf5;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      font-size: 1.2rem;
+    }
   </style>
 </head>
 <body>
+  <div class="loading-overlay" id="loading-overlay">Other players are thinking and acting...</div>
   <div class="container-fluid py-3">
     <header class="d-flex justify-content-between align-items-center mb-3">
-      <div class="fs-4 fw-bold">🦢 LLM 鹅鸭杀</div>
+      <div class="fs-4 fw-bold">🦢 LLM Goose Duck Game</div>
       <div class="d-flex align-items-center gap-2">
         <div class="dropdown">
-          <button class="btn btn-outline-light btn-sm dropdown-toggle" id="role-btn" data-bs-toggle="dropdown">我的身份</button>
+          <button class="btn btn-outline-light btn-sm dropdown-toggle" id="role-btn" data-bs-toggle="dropdown">My Identity</button>
           <div class="dropdown-menu dropdown-menu-end p-3 text-dark" id="role-dropdown" style="min-width:240px;">
-            <div id="role-content" class="small text-muted">身份未知</div>
+            <div id="role-content" class="small text-muted">Identity unknown</div>
           </div>
         </div>
-        <a class="btn btn-outline-info btn-sm" href="map.html">查看地图</a>
-        <button class="btn btn-outline-warning btn-sm" onclick="resetGame()">重新开始</button>
+        <a class="btn btn-outline-info btn-sm" href="map.html">View Map</a>
+        <button class="btn btn-outline-warning btn-sm" onclick="resetGame()">Reset Game</button>
       </div>
     </header>
 
     <div id="start-screen" class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh;">
       <h2 class="mb-3">🦢 vs 🦆</h2>
-      <p class="text-secondary text-center mb-4">在飞船上推理、欺骗并生存下来。点击开始游戏。</p>
-      <button class="btn btn-success btn-lg" onclick="startGame()">开始游戏</button>
+      <p class="text-secondary text-center mb-4">Reason, deceive, and survive on the spaceship. Click to start the game.</p>
+      <button class="btn btn-success btn-lg" onclick="startGame()">Start Game</button>
     </div>
 
     <div id="game-layout" class="row g-3 d-none">
       <div class="col-lg-3">
-      <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span>玩家状态</span>
-          <span class="badge bg-secondary" id="alive-count">0/0</span>
-        </div>
-          <div class="card-body" id="players-list" style="max-height:65vh; overflow-y:auto;"></div>
-        </div>
-        <div class="card">
-          <div class="card-header">我的信息</div>
-          <div class="card-body" id="my-info">
-            <div class="text-muted small">等待开始...</div>
+        <div class="card h-100">
+          <div class="card-header">My Info</div>
+          <div class="card-body" id="my-info" style="overflow-y:auto; max-height:85vh;">
+            <div class="text-muted small">Waiting to start...</div>
           </div>
         </div>
       </div>
@@ -86,21 +91,21 @@
         <div class="card mb-3">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div>
-              <div class="fw-bold" id="room-name">📍 未知房间</div>
+              <div class="fw-bold" id="room-name">📍 Unknown Room</div>
               <div class="text-secondary small" id="room-desc">...</div>
             </div>
             <div class="text-end">
-              <div class="phase-badge bg-dark text-light" id="phase-badge">等待开始</div>
-              <div class="small" id="round-display">回合 0</div>
+              <div class="phase-badge bg-dark text-light" id="phase-badge">Waiting to start</div>
+              <div class="small" id="round-display">Round 0</div>
             </div>
           </div>
           <div class="card-body">
             <div class="mb-3">
-              <div class="fw-semibold mb-2">在场人员</div>
+              <div class="fw-semibold mb-2">People Here</div>
               <div class="d-flex flex-wrap gap-2" id="players-here"></div>
             </div>
             <div>
-              <div class="fw-semibold mb-2">可执行动作</div>
+              <div class="fw-semibold mb-2">Available Actions</div>
               <div class="d-grid gap-2" id="actions-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
             </div>
           </div>
@@ -109,7 +114,7 @@
 
       <div class="col-lg-3">
         <div class="card h-100">
-          <div class="card-header">事件日志</div>
+          <div class="card-header">Event Log</div>
           <div class="card-body" id="event-log" style="overflow-y:auto; max-height:75vh;"></div>
         </div>
       </div>
@@ -121,6 +126,7 @@
     const API_BASE = "http://127.0.0.1:8000";
     let gameState = null;
     let autoShowRole = false;
+    let overlayTimeout = null;
 
     async function fetchState() {
       try {
@@ -133,8 +139,12 @@
         gameState = data;
         showGame();
         renderGame();
+        if (gameState.phase === "discussion" || gameState.phase === "voting") {
+          window.location.href = "meeting.html";
+          return;
+        }
       } catch (err) {
-        console.error("获取状态失败:", err);
+        console.error("Failed to fetch state:", err);
         showStart();
       }
     }
@@ -147,13 +157,14 @@
         showGame();
         renderGame();
       } catch (err) {
-        alert("开始游戏失败，请检查后端");
+        alert("Failed to start game, please check the backend");
         console.error(err);
       }
     }
 
     async function doAction(action) {
       try {
+        document.getElementById("loading-overlay").style.display = "flex";
         const res = await fetch(`${API_BASE}/api/action`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -161,8 +172,14 @@
         });
         gameState = await res.json();
         renderGame();
+        if (gameState.phase === "discussion" || gameState.phase === "voting") {
+          window.location.href = "meeting.html";
+          return;
+        }
       } catch (err) {
-        console.error("执行动作失败:", err);
+        console.error("Failed to execute action:", err);
+      } finally {
+        document.getElementById("loading-overlay").style.display = "none";
       }
     }
 
@@ -173,7 +190,25 @@
         autoShowRole = false;
         showStart();
       } catch (err) {
-        console.error("重置失败:", err);
+        console.error("Reset failed:", err);
+      }
+    }
+
+    async function startChat(targetId) {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ target_id: targetId }),
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+        window.location.href = "chat.html";
+      } catch (err) {
+        console.error("Failed to start conversation:", err);
       }
     }
 
@@ -187,17 +222,29 @@
       document.getElementById("game-layout").classList.remove("d-none");
     }
 
+    function showOverlayOnceIfNeeded() {
+      const overlay = document.getElementById("loading-overlay");
+      if (localStorage.getItem("showOverlayAfterChat") === "true") {
+        overlay.style.display = "flex";
+        localStorage.removeItem("showOverlayAfterChat");
+        clearTimeout(overlayTimeout);
+        overlayTimeout = setTimeout(() => {
+          overlay.style.display = "none";
+        }, 1800);
+      }
+    }
+
     function renderGame() {
       if (!gameState) return;
 
       // Phase
       const phaseBadge = document.getElementById("phase-badge");
       const phaseLabels = {
-        "lobby": "等待开始",
-        "free_roam": "🚀 自由活动",
-        "discussion": "🗣️ 讨论中",
-        "voting": "🗳️ 投票中",
-        "game_over": "游戏结束",
+        "lobby": "Waiting to start",
+        "free_roam": "🚀 Free Roam",
+        "discussion": "🗣️ Discussion",
+        "voting": "🗳️ Voting",
+        "game_over": "Game Over",
       };
       phaseBadge.textContent = phaseLabels[gameState.phase] || gameState.phase;
       phaseBadge.className = "phase-badge bg-dark text-light";
@@ -205,29 +252,35 @@
       if (gameState.phase === "discussion") phaseBadge.classList.add("bg-warning", "text-dark");
       if (gameState.phase === "voting") phaseBadge.classList.add("bg-danger");
       if (gameState.phase === "game_over") phaseBadge.classList.add("bg-secondary");
-      document.getElementById("round-display").textContent = `回合 ${gameState.round}`;
+      document.getElementById("round-display").textContent = `Round ${gameState.round}`;
 
       // My role dropdown
       if (gameState.player?.role) renderRole(gameState.player.role, gameState.player.can_kill);
-
-      // Players list
-      const playersList = document.getElementById("players-list");
-      playersList.innerHTML = "";
-      (gameState.all_players || []).forEach(p => {
-        const item = document.createElement("div");
-        item.className = "d-flex align-items-center mb-2 p-2 rounded " + (p.is_alive ? "bg-dark-subtle" : "bg-dark-subtle player-dead");
-        item.innerHTML = `
-          <div class="me-2 fs-5">${p.avatar || "👤"}</div>
-          <div>
-            <div class="fw-semibold">${p.name} ${p.id === "player" ? "(你)" : ""}</div>
-            <div class="text-secondary small">${p.is_alive ? "存活" : "死亡"} · ${p.location || "-"}</div>
-          </div>
+      // My info (tasks + known deaths)
+      const myInfo = document.getElementById("my-info");
+      if (gameState.player?.tasks) {
+        const tasks = gameState.player.tasks.map(t => {
+          const p = t.progress || 0;
+          const label = p >= 2 ? "Completed" : p === 1 ? "1/2" : "Not started";
+          const loc = t.location_name || t.location || "Unknown location";
+          return `<div class="d-flex justify-content-between small text-secondary border-bottom border-secondary-subtle py-1">
+              <span>${t.name}</span>
+              <span>${loc} · ${label}</span>
+            </div>`;
+        }).join("");
+        const deaths = (gameState.known_deaths || []).map(d => {
+          const loc = d.location_name || d.location || "";
+          return `<div class="small text-danger">☠️ ${d.name}${loc ? " @ " + loc : ""}</div>`;
+        }).join("");
+        myInfo.innerHTML = `
+          <div class="fw-semibold mb-1">${gameState.player.name}</div>
+          <div class="text-secondary small mb-3">${gameState.player.role?.name || "Unknown identity"}</div>
+          <div class="fw-semibold mb-1">Task Progress</div>
+          ${tasks || '<div class="text-secondary small">No tasks</div>'}
+          <div class="fw-semibold mt-3 mb-1">Known Deaths</div>
+          ${deaths || '<div class="text-secondary small">None found</div>'}
         `;
-        item.onclick = () => renderPlayerDetail(p);
-        playersList.appendChild(item);
-      });
-      const alive = (gameState.all_players || []).filter(p => p.is_alive).length;
-      document.getElementById("alive-count").textContent = `${alive}/${gameState.all_players?.length || 0}`;
+      }
 
       // Room info
       if (gameState.current_room) {
@@ -244,20 +297,24 @@
         playersHere.appendChild(badge);
       });
       if ((gameState.players_here || []).length === 0) {
-        playersHere.innerHTML = '<span class="text-secondary">这里只有你一个人</span>';
+        playersHere.innerHTML = '<span class="text-secondary">You are alone here</span>';
       }
 
       // Actions
       const actionsGrid = document.getElementById("actions-grid");
       actionsGrid.innerHTML = "";
       if ((gameState.available_actions || []).length === 0) {
-        actionsGrid.innerHTML = '<div class="text-secondary">暂无可用动作</div>';
+        actionsGrid.innerHTML = '<div class="text-secondary">No available actions</div>';
       } else {
         (gameState.available_actions || []).forEach(action => {
           const btn = document.createElement("button");
           btn.className = "btn btn-outline-light action-btn action-" + action.type;
           btn.textContent = action.label;
-          btn.onclick = () => doAction(action);
+          if (action.type === "talk") {
+            btn.onclick = () => startChat(action.target);
+          } else {
+            btn.onclick = () => doAction(action);
+          }
           actionsGrid.appendChild(btn);
         });
       }
@@ -266,25 +323,28 @@
       renderEvents(gameState.events || []);
 
       if (gameState.phase === "game_over") {
-        alert(gameState.winner_reason || "游戏结束");
+        alert(gameState.winner_reason || "Game Over");
       }
+
+      // Briefly show overlay when returning from chat
+      showOverlayOnceIfNeeded();
     }
 
     function renderRole(role, canKill) {
       const dropdown = document.getElementById("role-dropdown");
       const content = document.getElementById("role-content");
-      const teamLabels = { good: "好人阵营", evil: "坏人阵营", neutral: "中立阵营" };
+      const teamLabels = { good: "Good Team", evil: "Evil Team", neutral: "Neutral Team" };
       const roleEmoji = { goose: "🦢", sheriff: "🔍", vigilante: "🗡️", canadian: "🍁", dodo: "🦤", assassin: "🎯" };
       content.innerHTML = `
         <div class="d-flex align-items-center gap-2 mb-2">
           <div class="fs-4">${roleEmoji[role.role_type] || "❓"}</div>
           <div>
-            <div class="fw-semibold">${role.name}</div>
-            <div class="text-secondary small">${teamLabels[role.team] || role.team}</div>
+            <div class="fw-semibold text-dark">${role.name}</div>
+            <div class="text-dark">${teamLabels[role.team] || role.team}</div>
           </div>
         </div>
-        <div class="text-secondary small mb-2">${role.description}</div>
-        ${canKill ? '<div class="text-danger small">🔪 可以击杀</div>' : ''}
+        <div class="mb-2 text-dark">${role.description}</div>
+        ${canKill ? '<div class="text-dark">🔪 Can kill</div>' : ''}
       `;
       if (autoShowRole) {
         dropdown.classList.add("show");
@@ -297,9 +357,9 @@
       const myInfo = document.getElementById("my-info");
       myInfo.innerHTML = `
         <div class="fw-bold mb-1">${p.name}</div>
-        <div class="text-secondary small mb-1">状态：${p.is_alive ? "存活" : "死亡"}</div>
-        <div class="text-secondary small mb-1">位置：${p.location || "-"}</div>
-        <div class="text-secondary small mb-1">最近动作：${p.last_action || "未知"}</div>
+        <div class="text-secondary small mb-1">Status: ${p.is_alive ? "Alive" : "Dead"}</div>
+        <div class="text-secondary small mb-1">Location: ${p.location || "-"}</div>
+        <div class="text-secondary small mb-1">Last Action: ${p.last_action || "Unknown"}</div>
       `;
     }
 
@@ -317,6 +377,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       fetchState();
+      showOverlayOnceIfNeeded();
     });
   </script>
 </body>

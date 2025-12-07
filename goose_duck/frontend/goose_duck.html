@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LLM 鹅鸭杀</title>
+  <title>LLM Goose Duck Game</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -532,25 +532,25 @@
 <body>
   <div class="container">
     <header>
-      <h1><span class="goose">🦢</span> LLM 鹅鸭杀 <span class="duck">🦆</span></h1>
+      <h1><span class="goose">🦢</span> LLM Goose Duck Game <span class="duck">🦆</span></h1>
       <div class="header-info">
         <div class="role-button">
-          <button class="action-btn" id="role-btn">我的身份</button>
+          <button class="action-btn" id="role-btn">My Identity</button>
           <div class="role-dropdown" id="role-dropdown">
             <div id="role-content">
-              <div style="color: var(--text-muted);">身份未知</div>
+              <div style="color: var(--text-muted);">Identity unknown</div>
             </div>
           </div>
         </div>
-        <button class="action-btn" onclick="resetGame()">重新开始</button>
+        <button class="action-btn" onclick="resetGame()">Reset Game</button>
       </div>
     </header>
 
     <!-- Start Screen -->
     <div class="start-screen" id="start-screen">
       <h2>🦢 vs 🦆</h2>
-      <p>在这艘太空飞船上，有人并不是他们看起来的那样...<br>找出隐藏在船员中的鸭子，或者作为鸭子消灭所有人！</p>
-      <button class="start-btn" onclick="startGame()">开始游戏</button>
+      <p>On this spaceship, someone is not who they appear to be...<br>Find the ducks hidden among the crew, or as a duck, eliminate everyone!</p>
+      <button class="start-btn" onclick="startGame()">Start Game</button>
     </div>
 
     <!-- Game UI (hidden until game starts) -->
@@ -558,20 +558,20 @@
       <div class="card" style="height: calc(100vh - 120px); display:flex; flex-direction:column;">
         <div class="card-header">
           <div>
-            <div class="room-name" id="room-name">📍 未知位置</div>
+            <div class="room-name" id="room-name">📍 Unknown Location</div>
             <div class="room-desc" id="room-desc" style="color: var(--text-secondary); font-size:0.9rem;">...</div>
           </div>
           <div style="text-align:right;">
-            <div id="round-display">回合 0</div>
-            <div class="phase-badge" id="phase-badge">等待开始</div>
+            <div id="round-display">Round 0</div>
+            <div class="phase-badge" id="phase-badge">Waiting to start</div>
           </div>
         </div>
         <div style="padding:1rem;">
-          <div style="margin-bottom: 0.5rem;"><strong>在场人员:</strong></div>
+          <div style="margin-bottom: 0.5rem;"><strong>People Here:</strong></div>
           <div class="players-here" id="players-here" style="margin-bottom:1rem;"></div>
           <div class="grid-map" id="grid-map"></div>
           <div style="margin-top:1rem;">
-            <div style="margin-bottom:0.5rem; font-weight:600;">可执行动作</div>
+            <div style="margin-bottom:0.5rem; font-weight:600;">Available Actions</div>
             <div class="actions-grid" id="actions-grid"></div>
           </div>
         </div>
@@ -580,13 +580,13 @@
 
     <div class="right-panel hidden" id="right-panel">
       <div class="card" style="flex:1;">
-        <div class="card-header">玩家信息</div>
+        <div class="card-header">Player Info</div>
         <div class="card-body" id="player-detail" style="height:100%; overflow-y:auto;">
-          <div style="color: var(--text-muted);">点击左侧地图中的玩家查看详情</div>
+          <div style="color: var(--text-muted);">Click a player on the left map to view details</div>
         </div>
       </div>
       <div class="card" style="flex:1;">
-        <div class="card-header">事件日志</div>
+        <div class="card-header">Event Log</div>
         <div class="card-body event-log" id="event-log"></div>
       </div>
     </div>
@@ -596,13 +596,13 @@
   <div class="modal-overlay" id="discussion-modal">
     <div class="modal">
       <div class="modal-header">
-        <span>🗣️ 紧急会议</span>
+        <span>🗣️ Emergency Meeting</span>
       </div>
       <div class="modal-body" id="discussion-messages"></div>
       <div class="modal-footer">
-        <input type="text" id="discussion-input" placeholder="发言..." />
-        <button onclick="sendDiscussionMessage()">发言</button>
-        <button onclick="startVoting()" style="background: var(--warning);">开始投票</button>
+        <input type="text" id="discussion-input" placeholder="Speak..." />
+        <button onclick="sendDiscussionMessage()">Speak</button>
+        <button onclick="startVoting()" style="background: var(--warning);">Start Voting</button>
       </div>
     </div>
   </div>
@@ -610,9 +610,9 @@
   <!-- Game Over -->
   <div class="game-over-overlay" id="game-over-overlay">
     <div class="game-over-content" id="game-over-content">
-      <h2>游戏结束</h2>
+      <h2>Game Over</h2>
       <p id="game-over-reason"></p>
-      <button class="start-btn" onclick="resetGame()">再来一局</button>
+      <button class="start-btn" onclick="resetGame()">Play Again</button>
     </div>
   </div>
 
@@ -640,7 +640,7 @@
         await fetchMap();
         renderGame();
       } catch (err) {
-        console.error("获取状态失败:", err);
+        console.error("Failed to fetch state:", err);
       }
     }
 
@@ -650,7 +650,7 @@
         mapInfo = await res.json();
         renderGridMap();
       } catch (err) {
-        console.error("获取地图失败:", err);
+        console.error("Failed to fetch map:", err);
       }
     }
 
@@ -663,14 +663,14 @@
         await fetchMap();
         renderGame();
       } catch (err) {
-        console.error("开始游戏失败:", err);
-        alert("开始游戏失败，请确保后端已启动");
+        console.error("Failed to start game:", err);
+        alert("Failed to start game, please ensure the backend is running");
       }
     }
 
     async function doAction(action) {
       try {
-        document.getElementById("actions-grid").innerHTML = '<div style="color: var(--text-muted);">处理中...</div>';
+        document.getElementById("actions-grid").innerHTML = '<div style="color: var(--text-muted);">Processing...</div>';
         
         const res = await fetch(`${API_BASE}/api/action`, {
           method: "POST",
@@ -682,12 +682,12 @@
         await fetchMap();
         renderGame();
         
-        // 检查是否进入讨论
+        // Check if entering discussion
         if (gameState.phase === "discussion") {
           document.getElementById("discussion-modal").classList.add("active");
         }
       } catch (err) {
-        console.error("执行动作失败:", err);
+        console.error("Failed to execute action:", err);
         fetchState();
       }
     }
@@ -701,7 +701,7 @@
         mapInfo = null;
         selectedPlayerId = null;
       } catch (err) {
-        console.error("重置失败:", err);
+        console.error("Reset failed:", err);
       }
     }
 
@@ -720,7 +720,7 @@
         input.value = "";
         renderDiscussion(data.messages || []);
       } catch (err) {
-        console.error("发言失败:", err);
+        console.error("Failed to send message:", err);
       }
     }
 
@@ -731,7 +731,7 @@
         document.getElementById("discussion-modal").classList.remove("active");
         renderGame();
       } catch (err) {
-        console.error("开始投票失败:", err);
+        console.error("Failed to start voting:", err);
       }
     }
 
@@ -750,7 +750,7 @@
     function renderRoleDropdown(role, canKill) {
       const dropdown = document.getElementById("role-dropdown");
       const content = document.getElementById("role-content");
-      const teamLabels = { good: "好人阵营", evil: "坏人阵营", neutral: "中立阵营" };
+      const teamLabels = { good: "Good Team", evil: "Evil Team", neutral: "Neutral Team" };
       const roleEmoji = { goose: "🦢", sheriff: "🔍", vigilante: "🗡️", canadian: "🍁", dodo: "🦤", assassin: "🎯" };
       content.innerHTML = `
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
@@ -761,7 +761,7 @@
           </div>
         </div>
         <div style="color:var(--text-secondary); font-size:0.9rem;">${role.description}</div>
-        ${canKill ? '<div style="color: var(--danger); margin-top: 0.5rem;">🔪 可以击杀</div>' : ''}
+        ${canKill ? '<div style="color: var(--danger); margin-top: 0.5rem;">🔪 Can kill</div>' : ''}
       `;
       if (roleDropdownAutoShow) {
         dropdown.classList.add("active");
@@ -772,16 +772,16 @@
     function renderPlayerDetail(st) {
       const detail = document.getElementById("player-detail");
       if (!st) {
-        detail.innerHTML = `<div style="color: var(--text-muted);">点击左侧地图中的玩家查看详情</div>`;
+        detail.innerHTML = `<div style="color: var(--text-muted);">Click a player on the left map to view details</div>`;
         return;
       }
-      const roleName = st.role?.name || (st.id === "player" ? gameState?.player?.role?.name || "未知" : "未知");
+      const roleName = st.role?.name || (st.id === "player" ? gameState?.player?.role?.name || "Unknown" : "Unknown");
       detail.innerHTML = `
         <div class="player-name" style="font-size:1.1rem; margin-bottom:6px;">${st.name}</div>
-        <div class="player-status">状态：${st.is_alive ? "存活" : "死亡"}</div>
-        <div class="player-status">位置：${st.location || "-"}</div>
-        <div class="player-status">身份：${roleName}</div>
-        <div class="player-status">最近动作：${st.last_action || "idle"}</div>
+        <div class="player-status">Status: ${st.is_alive ? "Alive" : "Dead"}</div>
+        <div class="player-status">Location: ${st.location || "-"}</div>
+        <div class="player-status">Identity: ${roleName}</div>
+        <div class="player-status">Last Action: ${st.last_action || "idle"}</div>
       `;
     }
 
@@ -839,16 +839,16 @@
 
       const phaseBadge = document.getElementById("phase-badge");
       const phaseLabels = {
-        "lobby": "等待开始",
-        "free_roam": "🚀 自由活动",
-        "discussion": "🗣️ 讨论中",
-        "voting": "🗳️ 投票中",
-        "game_over": "游戏结束",
+        "lobby": "Waiting to start",
+        "free_roam": "🚀 Free Roam",
+        "discussion": "🗣️ Discussion",
+        "voting": "🗳️ Voting",
+        "game_over": "Game Over",
       };
       phaseBadge.textContent = phaseLabels[gameState.phase] || gameState.phase;
       phaseBadge.className = `phase-badge ${gameState.phase}`;
       
-      document.getElementById("round-display").textContent = `回合 ${gameState.round}`;
+      document.getElementById("round-display").textContent = `Round ${gameState.round}`;
 
       if (gameState.player?.role) {
         renderRoleDropdown(gameState.player.role, gameState.player.can_kill);
@@ -870,14 +870,14 @@
         playersHere.appendChild(badge);
       });
       if ((gameState.players_here || []).length === 0) {
-        playersHere.innerHTML = '<span style="color: var(--text-muted);">这里只有你一个人</span>';
+        playersHere.innerHTML = '<span style="color: var(--text-muted);">You are alone here</span>';
       }
 
       // Actions
       const actionsGrid = document.getElementById("actions-grid");
       actionsGrid.innerHTML = "";
       if ((gameState.available_actions || []).length === 0) {
-        actionsGrid.innerHTML = '<div style="color: var(--text-muted);">暂无可用动作</div>';
+        actionsGrid.innerHTML = '<div style="color: var(--text-muted);">No available actions</div>';
       } else {
         (gameState.available_actions || []).forEach(action => {
           const btn = document.createElement("button");
@@ -931,7 +931,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       fetchState();
-      // 身份按钮
+      // Identity button
       const roleBtn = document.getElementById("role-btn");
       const dropdown = document.getElementById("role-dropdown");
       roleBtn.addEventListener("click", () => dropdown.classList.toggle("active"));
@@ -942,7 +942,7 @@
       });
     });
 
-    // 按 Enter 发送讨论消息
+    // Press Enter to send discussion message
     document.getElementById("discussion-input").addEventListener("keypress", (e) => {
       if (e.key === "Enter") sendDiscussionMessage();
     });

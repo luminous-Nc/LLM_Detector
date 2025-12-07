@@ -1,4 +1,4 @@
-"""身份系统 - 鹅鸭杀角色身份定义"""
+"""Identity System - Goose Duck Game Role Identity Definitions"""
 
 from __future__ import annotations
 
@@ -8,75 +8,75 @@ from typing import List, Optional, Dict, Any
 
 
 class Team(str, Enum):
-    """阵营"""
-    GOOD = "good"        # 好人阵营（鹅）
-    NEUTRAL = "neutral"  # 中立阵营
-    EVIL = "evil"        # 坏人阵营（鸭）
+    """Team"""
+    GOOD = "good"        # Good team (Goose)
+    NEUTRAL = "neutral"  # Neutral team
+    EVIL = "evil"        # Evil team (Duck)
 
 
 class RoleType(str, Enum):
-    """角色类型"""
-    # 好人阵营
-    GOOSE = "goose"               # 普通鹅
-    SHERIFF = "sheriff"           # 警长[鹅] - 可以击杀，但误杀鹅会同归于尽
-    VIGILANTE = "vigilante"       # 正义使者[鹅] - 仅一次击杀机会
-    CANADIAN = "canadian"         # 加拿大鹅 - 被杀后自动报警
+    """Role Type"""
+    # Good team
+    GOOSE = "goose"               # Regular Goose
+    SHERIFF = "sheriff"           # Sheriff [Goose] - Can kill, but killing a goose causes mutual destruction
+    VIGILANTE = "vigilante"       # Vigilante [Goose] - Only one kill opportunity
+    CANADIAN = "canadian"         # Canadian Goose - Auto-reports when killed
     
-    # 中立阵营
-    DODO = "dodo"                 # 呆呆鸟 - 被投票放逐即获胜
+    # Neutral team
+    DODO = "dodo"                 # Dodo - Wins by being voted out
     
-    # 坏人阵营
-    ASSASSIN = "assassin"         # 刺客[鸭] - 会议期间可狙击
+    # Evil team
+    ASSASSIN = "assassin"         # Assassin [Duck] - Can snipe during meetings
 
 
-# 角色配置
+# Role configurations
 ROLE_CONFIGS: Dict[RoleType, Dict[str, Any]] = {
-    # 好人
+    # Good
     RoleType.GOOSE: {
         "team": Team.GOOD,
-        "name": "鹅",
-        "description": "普通的好人，通过完成任务或找出坏人获胜",
+        "name": "Goose",
+        "description": "Regular good player, wins by completing tasks or finding evil players",
         "abilities": [],
         "can_kill": False,
     },
     RoleType.SHERIFF: {
         "team": Team.GOOD,
-        "name": "警长[鹅]",
-        "description": "可以击杀任意角色，但如果击杀了鹅将与目标同归于尽。",
+        "name": "Sheriff [Goose]",
+        "description": "Can kill any role, but killing a goose will cause mutual destruction.",
         "abilities": ["sheriff_kill"],
         "can_kill": True,
     },
     RoleType.VIGILANTE: {
         "team": Team.GOOD,
-        "name": "正义使者[鹅]",
-        "description": "只有一次击杀机会，可以猎杀任意目标。",
+        "name": "Vigilante [Goose]",
+        "description": "Only one kill opportunity, can hunt any target.",
         "abilities": ["single_kill"],
         "can_kill": True,
         "kill_uses": 1,
     },
     RoleType.CANADIAN: {
         "team": Team.GOOD,
-        "name": "加拿大鹅",
-        "description": "被杀后会强制凶手立刻报警。",
+        "name": "Canadian Goose",
+        "description": "Forces the killer to immediately report when killed.",
         "abilities": ["death_report"],
         "can_kill": False,
     },
 
-    # 中立
+    # Neutral
     RoleType.DODO: {
         "team": Team.NEUTRAL,
-        "name": "呆呆鸟",
-        "description": "在投票阶段被放逐即可直接获胜。",
+        "name": "Dodo",
+        "description": "Wins directly by being voted out in the voting phase.",
         "abilities": [],
         "can_kill": False,
         "win_condition": "voted_out",
     },
     
-    # 坏人
+    # Evil
     RoleType.ASSASSIN: {
         "team": Team.EVIL,
-        "name": "刺客[鸭]",
-        "description": "伪装成鹅，暗中击杀；会议期间可狙击两次（每次会议一次）。",
+        "name": "Assassin [Duck]",
+        "description": "Disguised as a goose, kills secretly; can snipe twice during meetings (once per meeting).",
         "abilities": ["kill", "snipe"],
         "can_kill": True,
     },
@@ -85,7 +85,7 @@ ROLE_CONFIGS: Dict[RoleType, Dict[str, Any]] = {
 
 @dataclass
 class Role:
-    """角色身份"""
+    """Role Identity"""
     role_type: RoleType
     team: Team
     name: str
@@ -97,7 +97,7 @@ class Role:
     
     @classmethod
     def from_type(cls, role_type: RoleType) -> "Role":
-        """从角色类型创建角色"""
+        """Create role from role type"""
         config = ROLE_CONFIGS[role_type]
         return cls(
             role_type=role_type,
@@ -124,24 +124,24 @@ class Role:
 
 @dataclass
 class PlayerIdentity:
-    """玩家身份状态"""
+    """Player Identity State"""
     player_id: str
     player_name: str
     role: Role
     is_alive: bool = True
     kill_uses_remaining: Optional[int] = None
     
-    # 特殊状态
-    is_protected: bool = False      # 被医生保护
-    morphed_as: Optional[str] = None  # 变形成的目标
+    # Special status
+    is_protected: bool = False      # Protected by doctor
+    morphed_as: Optional[str] = None  # Morph target
 
     def __post_init__(self) -> None:
-        """初始化一次性技能的剩余次数"""
+        """Initialize remaining uses for one-time abilities"""
         if self.kill_uses_remaining is None:
             self.kill_uses_remaining = self.role.kill_uses
     
     def can_use_kill(self) -> bool:
-        """是否可以使用杀人能力"""
+        """Whether can use kill ability"""
         return (
             self.is_alive 
             and self.role.can_kill 
@@ -149,12 +149,12 @@ class PlayerIdentity:
         )
     
     def use_kill(self) -> None:
-        """使用杀人能力后进入冷却"""
+        """Use kill ability and enter cooldown"""
         if self.kill_uses_remaining is not None and self.kill_uses_remaining > 0:
             self.kill_uses_remaining -= 1
     
     def to_dict(self, reveal_role: bool = False) -> Dict[str, Any]:
-        """转换为字典，reveal_role 控制是否暴露身份"""
+        """Convert to dictionary, reveal_role controls whether to expose identity"""
         result = {
             "player_id": self.player_id,
             "player_name": self.player_name,

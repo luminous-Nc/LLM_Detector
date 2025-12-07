@@ -1,51 +1,50 @@
-# 鹅鸭杀游戏配置
+# Goose Duck Game Configuration
 
 game:
-  name: "LLM 鹅鸭杀"
-  description: "一个由 LLM 驱动的社交推理游戏"
+  name: "LLM Goose Duck Game"
+  description: "A social deduction game driven by LLM"
   version: "1.0.0"
 
-# 玩家配置
+# Player Configuration
 player:
   name: "Player"
   is_human: true
 
-# NPC 配置（由 LLM 驱动）
+# NPC Configuration (LLM-driven)
 npcs:
-  - id: "npc_red"
+  - id: "npc_A"
     name: "Alice"
 
-  - id: "npc_blue"
+  - id: "npc_B"
     name: "Bob"
 
-  - id: "npc_green"
+  - id: "npc_C"
     name: "Clearlove"
 
-  - id: "npc_yellow"
+  - id: "npc_D"
     name: "Donk"
 
-  - id: "npc_purple"
-    name: "Ethon"
+  - id: "npc_E"
+    name: "Ethan"
 
-# 游戏流程
+# Game Flow
 phases:
   free_roam:
-    name: "自由活动"
-    description: "玩家可以移动、做任务、与他人互动"
+    name: "Free Roam"
+    description: "Players can move, complete tasks, and interact with others"
     
   discussion:
-    name: "讨论阶段"
-    description: "所有人集合讨论，轮流发言"
-    speaking_order: "round_robin"  # 轮流发言
+    name: "Discussion Phase"
+    description: "Everyone gathers to discuss and take turns speaking"
+    speaking_order: "round_robin"  # Round-robin speaking
     
   voting:
-    name: "投票阶段"
-    description: "投票决定放逐谁"
-    skip_allowed: true  # 允许弃票
+    name: "Voting Phase"
+    description: "Vote to decide who to eject"
+    skip_allowed: true  # Allow skipping vote
 
-# LLM 设置
+# LLM Settings
 llm:
-  decision_making: true  # NPC 使用 LLM 决策
-  dialogue: true         # NPC 使用 LLM 对话
-  max_tokens: 25600       # 最大回复长度
-
+  decision_making: true  # NPCs use LLM for decision making
+  dialogue: true         # NPCs use LLM for dialogue
+  max_tokens: 25600       # Maximum response length

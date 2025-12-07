@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM Goose Duck Game - Conversation</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: radial-gradient(circle at top left, #1f2b45, #0b1220); color: #e8ecf5; min-height: 100vh; }
+    .card { background: rgba(20, 28, 47, 0.9); border-color: #1f2a44; color: #f5f7ff; }
+    .chat-box { height: 65vh; overflow-y: auto; }
+    .msg { padding: 8px 12px; border-radius: 12px; margin-bottom: 8px; max-width: 80%; }
+    .msg.me { background: #3b82f6; color: #fff; margin-left: auto; }
+    .msg.other { background: #25314f; color: #e8ecf5; margin-right: auto; }
+    .msg .name { font-weight: 600; font-size: 0.9rem; }
+    .msg .text { font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid py-3">
+    <header class="d-flex justify-content-between align-items-center mb-3">
+      <div class="fs-4 fw-bold">💬 Conversation</div>
+      <div class="d-flex align-items-center gap-2">
+        <div class="dropdown">
+          <button class="btn btn-outline-light btn-sm dropdown-toggle" id="role-btn" data-bs-toggle="dropdown">My Identity</button>
+          <div class="dropdown-menu dropdown-menu-end p-3 text-dark" id="role-dropdown" style="min-width:240px;">
+            <div id="role-content" class="small text-muted">Identity unknown</div>
+          </div>
+        </div>
+        <a class="btn btn-outline-info btn-sm" href="map.html">View Map</a>
+        <a class="btn btn-outline-light btn-sm" href="game.html">Back to Game</a>
+        <button class="btn btn-outline-warning btn-sm" onclick="resetGame()">Reset Game</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-semibold">Conversation with: <span id="target-name">-</span></div>
+          <div class="text-secondary small" id="room-name"></div>
+        </div>
+        <div class="text-secondary small" id="chat-status">Waiting...</div>
+      </div>
+      <div class="card-body d-flex flex-column gap-3">
+        <div class="chat-box" id="chat-box"></div>
+        <div class="input-group">
+          <input type="text" class="form-control" id="chat-input" placeholder="Enter message..." />
+          <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+          <button class="btn btn-outline-secondary" onclick="endChat()">End Conversation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+    let gameState = null;
+    let chatState = null;
+
+    async function fetchState() {
+      try {
+        const res = await fetch(`${API_BASE}/api/state`);
+        gameState = await res.json();
+        if (gameState?.player?.role) renderRole(gameState.player.role, gameState.player.can_kill);
+      } catch (err) {
+        console.error("Failed to fetch state", err);
+      }
+    }
+
+    async function fetchChat() {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat/state`);
+        chatState = await res.json();
+        renderChat();
+        if (!chatState.active) {
+          localStorage.setItem("showOverlayAfterChat", "true");
+          window.location.href = "game.html";
+        }
+      } catch (err) {
+        console.error("Failed to fetch chat", err);
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("chat-input");
+      const text = input.value.trim();
+      if (!text) return;
+      await fetch(`${API_BASE}/api/chat/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text })
+      });
+      input.value = "";
+      await fetchChat();
+    }
+
+    async function endChat() {
+      await fetch(`${API_BASE}/api/chat/end`, { method: "POST" });
+      localStorage.setItem("showOverlayAfterChat", "true");
+      window.location.href = "game.html";
+    }
+
+    async function resetGame() {
+      await fetch(`${API_BASE}/api/reset`, { method: "POST" });
+      window.location.href = "game.html";
+    }
+
+    function renderRole(role, canKill) {
+      const dropdown = document.getElementById("role-dropdown");
+      const content = document.getElementById("role-content");
+      const teamLabels = { good: "Good Team", evil: "Evil Team", neutral: "Neutral Team" };
+      const roleEmoji = { goose: "🦢", sheriff: "🔍", vigilante: "🗡️", canadian: "🍁", dodo: "🦤", assassin: "🎯" };
+      content.innerHTML = `
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <div class="fs-4">${roleEmoji[role.role_type] || "❓"}</div>
+          <div>
+            <div class="fw-semibold">${role.name}</div>
+            <div class="text-secondary small">${teamLabels[role.team] || role.team}</div>
+          </div>
+        </div>
+        <div class="text-secondary small mb-2">${role.description}</div>
+        ${canKill ? '<div class="text-danger small">🔪 Can kill</div>' : ''}
+      `;
+    }
+
+    function renderChat() {
+      const targetLabel = document.getElementById("target-name");
+      const roomLabel = document.getElementById("room-name");
+      const statusLabel = document.getElementById("chat-status");
+      const box = document.getElementById("chat-box");
+      if (!chatState || !chatState.active) {
+        targetLabel.textContent = "-";
+        roomLabel.textContent = "Conversation ended";
+        statusLabel.textContent = "Conversation ended";
+        box.innerHTML = '<div class="text-secondary">No active conversation</div>';
+        return;
+      }
+      targetLabel.textContent = chatState.target?.name || "Unknown";
+      roomLabel.textContent = chatState.room_name ? `Location: ${chatState.room_name}` : "";
+      statusLabel.textContent = "Conversation active";
+      box.innerHTML = "";
+      (chatState.messages || []).forEach(m => {
+        const div = document.createElement("div");
+        const isMe = m.speaker_id === "player";
+        div.className = `msg ${isMe ? "me" : "other"}`;
+        div.innerHTML = `<div class="name">${m.speaker_name}</div><div class="text">${m.content}</div>`;
+        box.appendChild(div);
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      await fetchState();
+      await fetchChat();
+      setInterval(fetchChat, 2000);
+    });
+  </script>
+</body>
+</html>

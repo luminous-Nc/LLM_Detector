@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>鹅鸭杀 - ADMIN</title>
+  <title>Goose Duck Game - ADMIN</title>
   <style>
     :root {
       --bg: #0b1220;
@@ -17,7 +17,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: "Segoe UI", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       padding: 16px;
@@ -97,6 +97,19 @@
       gap: 12px;
       height: calc(100vh - 48px);
     }
+    .player-tab {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: #10192c;
+      color: var(--text);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .player-tab.active {
+      border-color: var(--accent);
+      color: #fff;
+      background: rgba(78, 205, 196, 0.2);
+    }
     .info-line { font-size: 0.9rem; margin-bottom: 4px; color: var(--muted); }
     .list { max-height: 100%; overflow-y: auto; }
     .list-item { padding: 8px; border-bottom: 1px solid var(--border); }
@@ -106,19 +119,27 @@
 <body>
   <div class="layout">
     <div class="card left-card">
-      <h3><span>地图</span><span class="pill" id="status-pill">Phase: -</span></h3>
+      <h3><span>Map</span><span class="pill" id="status-pill">Phase: -</span></h3>
       <div id="map-grid" class="grid-map"></div>
     </div>
 
     <div class="right-col">
       <div class="card">
-        <h3>玩家信息</h3>
+        <h3>Player Info</h3>
+        <div class="tabs" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+          <button class="player-tab" data-tab="info" onclick="setDetailTab('info')">Info</button>
+          <button class="player-tab" data-tab="action" onclick="setDetailTab('action')">Action</button>
+          <button class="player-tab" data-tab="chat" onclick="setDetailTab('chat')">Chat</button>
+          <button class="player-tab" data-tab="meeting" onclick="setDetailTab('meeting')">Meeting</button>
+          <button class="player-tab" data-tab="vote" onclick="setDetailTab('vote')">Vote</button>
+          <button class="player-tab" data-tab="response" onclick="setDetailTab('response')">Response</button>
+        </div>
         <div id="player-detail" style="height:100%; overflow-y:auto;">
-          <div class="muted">点击左侧地图中的玩家查看详情</div>
+          <div class="muted">Click a player on the left map to view details</div>
         </div>
       </div>
       <div class="card">
-        <h3>事件日志</h3>
+        <h3>Event Log</h3>
         <div class="list" id="events"></div>
       </div>
     </div>
@@ -132,7 +153,7 @@
     async function fetchOverview() {
       try {
         const res = await fetch(`${API}/api/admin/overview`);
-        if (!res.ok) throw new Error("请求失败");
+        if (!res.ok) throw new Error("Request failed");
         const data = await res.json();
         latestData = data;
         render(data);
@@ -178,7 +199,7 @@
             (occupied[room.id] || []).forEach(st => {
               const chip = document.createElement("div");
               chip.className = "player-chip" + (st.is_alive ? "" : " dead");
-              chip.textContent = `${st.label} ${st.name}`;
+              chip.textContent = `${st.name}`;
               chip.onclick = () => { selectedPlayer = st.id; renderPlayerDetail(st); };
               pWrap.appendChild(chip);
             });
@@ -191,27 +212,62 @@
       }
     }
 
+    let detailTab = "info";
+    function setDetailTab(tab) {
+      detailTab = tab;
+      document.querySelectorAll(".player-tab").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-tab") === tab);
+      });
+      if (selectedPlayer) {
+        const st = (latestData.statuses || []).find(p => p.id === selectedPlayer);
+        renderPlayerDetail(st);
+      }
+    }
+
     function renderPlayerDetail(st) {
       const detail = document.getElementById("player-detail");
       if (!st) {
-        detail.innerHTML = `<div class="muted">点击左侧玩家查看详情</div>`;
+        detail.innerHTML = `<div class="muted">Click a player on the left to view details</div>`;
         return;
       }
       const roleName = st.role?.name || "-";
-      detail.innerHTML = `
-        <div class="info-line"><strong>${st.label}</strong> ${st.name}</div>
-        <div class="info-line">身份：${roleName}</div>
-        <div class="info-line">状态：${st.is_alive ? "存活" : "死亡"}</div>
-        <div class="info-line">位置：${st.location || "-"}</div>
-        <div class="info-line">最近动作：${st.last_action || "idle"}</div>
-      `;
+      const prompts = st.last_prompts || {};
+      const responses = st.last_responses || {};
+      const renderBlock = (title, text) => `
+        <div style="margin-bottom:8px;">
+          <div class="info-line" style="color:#fff;">${title}</div>
+          <pre style="white-space:pre-wrap; background:#10192c; padding:8px; border-radius:8px; border:1px solid var(--border); max-height:220px; overflow:auto;">${text || "None"}</pre>
+        </div>`;
+      if (detailTab === "info") {
+        detail.innerHTML = `
+          <div class="info-line"><strong>${st.name}</strong></div>
+          <div class="info-line">Identity: ${roleName}</div>
+          <div class="info-line">Status: ${st.is_alive ? "Alive" : "Dead"}</div>
+          <div class="info-line">Location: ${st.location || "-"}</div>
+          <div class="info-line">Last Action: ${st.last_action || "idle"}</div>
+        `;
+      } else if (["action","chat","meeting","vote"].includes(detailTab)) {
+        const key = detailTab;
+        detail.innerHTML = `
+          <div class="info-line"><strong>${st.name}</strong> (${detailTab} prompt)</div>
+          ${renderBlock("Prompt", prompts[key])}
+        `;
+      } else if (detailTab === "response") {
+        detail.innerHTML = `
+          <div class="info-line"><strong>${st.name}</strong> (LLM Response)</div>
+          ${renderBlock("Action Response", responses.action)}
+          ${renderBlock("Chat Response", responses.chat)}
+          ${renderBlock("Meeting Response", responses.meeting)}
+          ${renderBlock("Vote Response", responses.vote)}
+        `;
+      }
     }
 
     function renderEvents(events) {
       const list = document.getElementById("events");
       list.innerHTML = "";
       if (!events.length) {
-        list.innerHTML = `<div class="muted">暂无事件</div>`;
+        list.innerHTML = `<div class="muted">No events</div>`;
         return;
       }
       events.slice(-50).reverse().forEach(ev => {
@@ -225,6 +281,7 @@
       });
     }
 
+    setDetailTab(detailTab);
     fetchOverview();
     setInterval(fetchOverview, 2000);
   </script>
